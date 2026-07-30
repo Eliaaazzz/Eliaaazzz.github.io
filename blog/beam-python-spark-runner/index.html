@@ -128,6 +128,15 @@
               executors, with Python code executing back in the LOOPBACK harness.</figcaption>
           </figure>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>The job server is the interpreter at an embassy. Your Python pipeline walks in
+            speaking Beam; Spark only speaks RDD. The interpreter translates the request, walks it
+            to the right counter (the master), and — because Spark's executors can't run your
+            Python functions themselves — phones your process back whenever a form needs filling
+            in <em>your</em> language. That callback line is LOOPBACK.</p>
+          </div>
+
           <p>The lovely consequence: your pipeline file doesn't mention Spark <em>anywhere</em>
           except the endpoint option. The uncomfortable consequence lives at the
           <a href="#streaming">end of this post</a>.</p>
@@ -267,6 +276,15 @@ INFO:apache_beam.runners.portability.portable_runner:Job state changed to DONE</
           <a href="https://github.com/apache/beam/issues/19468">issue #19468</a>: the portable Spark
           runner cannot run <strong>unbounded Splittable DoFns</strong>. Beam's own test suite
           name-skips every <code>test_sdf*</code> case on Spark.</p>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>A streaming source works like a library visitor who says "I'm pausing here — keep my
+            bookmark, wake me when you're ready." Flink takes the bookmark, files it, and taps the
+            visitor later. Spark, today, smiles and drops the bookmark in the bin. So the visitor
+            either refuses to pause (reads forever, blocking everything) or loses their page.
+            Batch reading — books with last pages — is unaffected.</p>
+          </div>
 
           <p>The missing piece is precise: when an unbounded SDF pauses itself with
           <code>defer_remainder</code>, the runner must catch the returned <em>residual</em>,

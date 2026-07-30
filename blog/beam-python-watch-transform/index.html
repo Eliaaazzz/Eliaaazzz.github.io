@@ -139,6 +139,15 @@
           output <em>once</em> the first time it's seen, tracks event time, and stops when a
           <strong>termination condition</strong> says so.</p></blockquote>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>Watch is a bouncer with a guest list. Every few seconds someone hands him the full
+            crowd outside (every poll re-lists <em>everything</em>). He checks each face against
+            the list: seen you before — you don't get in twice; new face — in you go, and onto the
+            list. The clever part is that his list survives him: if the bouncer faints, the
+            replacement picks up the same list and nobody sneaks in during the swap.</p>
+          </div>
+
           <p>The input element is a <em>thing to watch</em> — a directory, a table name, a job id. The
           growing set is <em>what's in it so far</em> — files, partitions, completed shards. This one
           shape covers a surprising amount of ground: new files under a prefix, new partitions of a
@@ -384,6 +393,14 @@ $ echo "2,world" &gt; landing/b.csv      # touch it again — no reprocess
           what makes ten thousand concurrent watches cheap: sleeping watches are just rows of durable
           state, not parked threads.</p>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>Ten thousand sleeping watches are ten thousand alarm clocks in a drawer — not ten
+            thousand people standing around staring at buckets. Setting an alarm costs almost
+            nothing; paying someone to stare costs a salary. <code>defer_remainder</code> is how a
+            watch puts itself in the drawer.</p>
+          </div>
+
           <p>Step 1 hides my favorite small design decision. An early version polled while holding
           the claim; review pointed out that a slow poll (a listing of a huge bucket, a slow HTTP
           call) would then block the tracker lock — the very lock the runner needs to take
@@ -432,6 +449,14 @@ $ echo "2,world" &gt; landing/b.csv      # touch it again — no reprocess
             </svg>
             <figcaption>Two restriction variants — polling and replay — make retried bundles deterministic.</figcaption>
           </figure>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>A customer says "the receipt email never arrived." You don't <em>re-run the
+            purchase</em> — you re-send the exact same receipt. The replay state is that saved
+            receipt: a retry re-emits precisely what the failed attempt promised, and never goes
+            back to the shop (the bucket) to ask again, because the shop may have changed.</p>
+          </div>
 
           <p>This is the same primary/residual algebra from
           <a href="/blog/beam-python-unbounded-sources/">part one</a>, bent to a new shape: the

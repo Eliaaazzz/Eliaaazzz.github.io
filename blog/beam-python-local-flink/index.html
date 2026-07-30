@@ -105,6 +105,15 @@
           ValidatesRunner CI uses — when I validated my GSoC work, this exact setup ran
           174 tests / 0 failures.</p>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>Beam is the <em>recipe</em>; a runner is the <em>kitchen</em>. DirectRunner is the
+            toy kitchen in your IDE — great for tasting, but the burners aren't real. Flink is an
+            actual industrial kitchen you can install on your laptop: real clocks, real
+            save-points, a real window to watch the cooks through (the web UI). Same recipe runs
+            in both — that's Beam's whole promise.</p>
+          </div>
+
           <p>What you need: <strong>Java 11+</strong>, <strong>Python 3.9–3.12 with
           <code>apache-beam</code></strong>, and a Linux-ish environment — macOS or Linux natively;
           on Windows, use <strong>WSL2</strong> and do <em>everything inside it</em> (the
@@ -246,6 +255,15 @@ if __name__ == "__main__":
             <figcaption>Raw capture: the Checkpoints tab. Ten completed checkpoints; the window
               operator alone carries ~185 KB of live state.</figcaption>
           </figure>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>A checkpoint is a save-game. Every ten seconds Flink quietly hits "save" on the
+            entire pipeline — including the half-counted windows in memory. Pull the plug
+            mid-level, restart, and it reloads the last save and keeps playing. No save-games =
+            start the level from scratch every crash. That's the entire religion of streaming
+            infrastructure, in one table.</p>
+          </div>
 
           <p>That table is the difference between a simulator and a runner. Kill the TaskManager
           mid-run and Flink restores from the latest checkpoint — the same machinery that makes an

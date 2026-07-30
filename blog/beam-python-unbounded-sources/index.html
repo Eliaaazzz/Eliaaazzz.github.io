@@ -143,6 +143,15 @@
             <li>A <strong>runner</strong> executes the graph, splitting work across many machines.</li>
           </ul>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>A pipeline is an assembly line for data. A <code>PCollection</code> is the boxes
+            moving down the belt. A <code>PTransform</code> is one station that does something to
+            each box. And a runner is the <em>factory you rent</em> — you hand over the same
+            blueprint, and it runs on your laptop today, on a hundred machines tomorrow, without
+            redrawing anything.</p>
+          </div>
+
           <p>A complete pipeline, so you've seen one:</p>
 
           <div class="codeblock">
@@ -209,6 +218,14 @@ with beam.Pipeline() as p:
             <figcaption>The whole problem in one picture: with a stream, "done" is never an option.</figcaption>
           </figure>
 
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>Bounded data is a sink full of dishes after dinner: wash them all, dry your hands,
+            done. Unbounded data is the sink of a restaurant <em>during service</em> — plates keep
+            arriving, and "finished" isn't a thing that exists. The only honest claim you can ever
+            make is "I'm caught up as of 9:41 pm."</p>
+          </div>
+
           <p>Running forever sounds simple — just loop, right? — until you ask the operational
           questions. Any real answer to "read a stream inside a distributed engine" has to solve four
           problems at once:</p>
@@ -225,6 +242,17 @@ with beam.Pipeline() as p:
             <li><strong>Yielding.</strong> When the stream is quiet, the reader must give the worker
               back — and be resumed later — instead of hogging a thread in a spin loop.</li>
           </ul>
+
+          <div class="callout">
+            <span class="callout-label">the same four, in plain words</span>
+            <p><strong>Parallelism</strong>: open more checkout lanes, one queue each.
+            <strong>Checkpointing</strong>: a bookmark, so whoever picks the book up next starts at
+            the right page — even if it's a different person on a different day.
+            <strong>Watermark</strong>: the postman's promise — <em>"nothing older than Tuesday is
+            still in my bag"</em> — which is the only reason you can ever safely say "Monday's mail
+            is complete." <strong>Yielding</strong>: if the belt is empty, go help elsewhere and
+            come back in five minutes; don't stand there staring at it.</p>
+          </div>
 
           <p>Java's <code>UnboundedSource</code> API is a checklist of exactly these concerns. The
           Python SDK never got that class — and by the time anyone might have ported it, Beam had
@@ -253,6 +281,15 @@ with beam.Pipeline() as p:
             <li>If it returns <code>False</code>, the runner has decided to take the rest of the work
               back. Stop immediately and return.</li>
           </ol>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>A restriction is a <em>work order</em>: "read pages 0 to ∞." <code>try_claim</code>
+            is you asking the supervisor "may I do the next chunk?" before each chunk. And a split
+            is the supervisor tearing the order in two — you keep the half you already did, and the
+            other half goes to someone else, or into the drawer for later. The half in the drawer
+            <em>is</em> the bookmark. That's why crash recovery falls out for free.</p>
+          </div>
 
           <p>Why would the runner say no? Because at any moment it may <strong>split</strong> the
           restriction into a <strong>primary</strong> (what you've claimed so far) and a
@@ -298,6 +335,15 @@ with beam.Pipeline() as p:
               tells the runner "this DoFn may do infinite work per element," which is what makes the
               output <code>PCollection</code> officially unbounded and the pipeline a streaming one.</li>
           </ul>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p><code>defer_remainder(5s)</code> is a snooze button that also saves your place:
+            "nothing to read right now — bookmark me, wake me in five." The watermark estimator is
+            you texting the postman's promise upstairs so the people waiting on "Monday's mail"
+            know when to stop waiting. And the decorator is just the sign on the door:
+            <em>this machine may run forever — plan accordingly.</em></p>
+          </div>
 
           <p>SDF is the machinery Beam recommends for every new connector. It's powerful — and, used
           raw, it's a lot: restrictions, trackers, providers, estimators, coders for all of the above.
@@ -438,6 +484,15 @@ class TickCheckpoint(CheckpointMark):
           runner has made the outputs durable. If the worker dies in between, finalize never fires, the
           checkpoint is restored, and the records are re-read. That ordering is what makes "ack the
           message queue" safe: you never acknowledge data the pipeline could still lose.</p>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>It's signing for a package. You don't sign at the warehouse, and you don't sign when
+            the van is "nearby" — you sign once the box is physically inside your house. If the van
+            crashes before that, nobody signed, so the store simply sends the box again. Signing =
+            <code>finalize_checkpoint</code>; the box being inside = the runner committing the
+            bundle.</p>
+          </div>
 
           <h3 id="step-2">Step 2 — the reader: a cursor with manners</h3>
 

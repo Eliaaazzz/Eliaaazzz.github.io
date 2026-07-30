@@ -27,7 +27,7 @@
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
     var revealables = document.querySelectorAll(
-      ".fig, .tblock, .pstrip, .page-dek, .manifesto .shell > *, .now-panel, .post-head"
+      ".fig, .manifesto .shell > *, .now-panel"
     );
     var io = new IntersectionObserver(
       function (entries) {
@@ -85,6 +85,105 @@
     });
     bar.appendChild(btn);
   });
+
+  /* ----- reading progress bar (post pages) ----- */
+  if (document.querySelector(".post-layout")) {
+    var bar = document.createElement("div");
+    bar.className = "progress";
+    bar.setAttribute("aria-hidden", "true");
+    document.body.appendChild(bar);
+    var onScroll = function () {
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - doc.clientHeight;
+      bar.style.width = (max > 0 ? (doc.scrollTop / max) * 100 : 0) + "%";
+    };
+    document.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* ----- zh/EN toggle (home page) ----- */
+  var langBtn = document.getElementById("langBtn");
+  if (langBtn) {
+    var ZH = {
+      ".tblock .role":
+        '我教批处理系统<span class="gs">永远</span>跑下去 —— 为 <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a> 构建的 unbounded sources 与 <span class="gs">Watch</span> transform，Google Summer of Code 2026。流式系统、机器学习研究、亚毫秒热路径。',
+      ".tblock .cta .btn.primary": "读 GSoC 全文 →",
+      ".tblock .cta .btn:not(.primary)": "看工程履历",
+      ".tblock .meta > div:nth-child(1)": "<b>图纸</b>eliaaazzz.github.io",
+      ".tblock .meta > div:nth-child(2)": "<b>版本</b>2026-07 · GSoC 版",
+      ".tblock .meta > div:nth-child(3)": "<b>坐标</b>澳大利亚 · 墨尔本",
+      ".tblock .meta > div:nth-child(4)": "<b>状态</b>开放 2027 应届机会",
+      ".crumbs-row .crumbs a:nth-child(1)": "博客",
+      ".crumbs-row .crumbs a:nth-child(2)": "工程",
+      ".crumbs-row .crumbs a:nth-child(3)": "研究",
+      ".crumbs-row .crumbs a:nth-child(6)": "邮箱",
+      "#fig0 span:nth-child(2)":
+        "实时 —— 我合进 Beam 的 Watch transform（PR #39023），来喂它。",
+      ".sim-head .t":
+        "Watch(<b>list_bucket</b>, poll_interval=3s) —— 每个文件<b>恰好发射一次</b>",
+      ".sim-body .lane:nth-child(1) h4": "存储桶 ./landing",
+      ".sim-body .lane:nth-child(3) h4": "已发射（下游）",
+      "#log": "待命 —— 往桶里丢个文件试试。",
+      "#add": "+ 丢一个新文件",
+      "#dup": "+ 丢一个重复文件",
+      ".sim-controls .hint": "去重 = blake2b(key) 对照已存档状态",
+      ".sim-note":
+        '这个小部件和真实语义一致：每次轮询都重新列出整个桶，但状态记得已经发射过什么 —— 重复的被划掉，崩溃重启也不会重发。<a href="/blog/beam-python-watch-transform/">看真实实现 →</a>',
+      "#fig1 span:nth-child(2)": "写作",
+      "#fig1 a": "全部文章 →",
+      "#fig2 span:nth-child(2)": "精选作品",
+      "#fig2 a": "工程页 →",
+      "#fig3 span:nth-child(2)": "研究",
+      "#fig3 a": "研究页 →",
+      "#fig4 span:nth-child(2)": "此刻",
+      ".manifesto .shell > p:first-child":
+        '教批处理系统<span class="gs">永远</span>跑下去。unbounded sources、诚实的<span class="gs">水印</span>、每个文件恰好<span class="gs">一次</span> —— 已合入 Apache Beam。',
+      ".manifesto .sig": "—— GSOC 2026 · PYTHON SDK · 经 BEAM PMC 主席评审",
+      ".now-panel .now-row:nth-child(1) .k": "在建",
+      ".now-panel .now-row:nth-child(2) .k": "评审中",
+      ".now-panel .now-row:nth-child(3) .k": "在研",
+      ".now-panel .now-row:nth-child(4) .k": "状态",
+      ".now-panel .now-row:nth-child(4) .v":
+        "墨尔本大学计算机科学大四在读 —— 开放 2027 应届机会",
+      ".foot-big": '一起造点能<span class="gs">永远</span>跑下去的东西。',
+      ".foot-links a:nth-child(2)": "领英",
+      ".foot-links a:nth-child(3)": "邮箱",
+      ".foot-links a:nth-child(5)": "博客",
+      ".foot-fine span:nth-child(2)": "纯手写 —— 无框架",
+      ".foot-fine span:nth-child(3)": "澳大利亚 · 墨尔本",
+    };
+    var applyLang = function (zh) {
+      Object.keys(ZH).forEach(function (sel) {
+        var el = document.querySelector(sel);
+        if (!el) return;
+        if (zh) {
+          if (el.dataset.en === undefined) el.dataset.en = el.innerHTML;
+          el.innerHTML = ZH[sel];
+        } else if (el.dataset.en !== undefined) {
+          el.innerHTML = el.dataset.en;
+        }
+      });
+      document.documentElement.classList.toggle("zh", zh);
+      document.documentElement.setAttribute("lang", zh ? "zh-CN" : "en");
+      langBtn.textContent = zh ? "EN" : "中";
+      langBtn.setAttribute(
+        "aria-label",
+        zh ? "Switch to English" : "切换到中文"
+      );
+    };
+    var zhOn = false;
+    try {
+      zhOn = localStorage.getItem("lang") === "zh";
+    } catch (e) {}
+    if (zhOn) applyLang(true);
+    langBtn.addEventListener("click", function () {
+      zhOn = !zhOn;
+      try {
+        localStorage.setItem("lang", zhOn ? "zh" : "en");
+      } catch (e) {}
+      applyLang(zhOn);
+    });
+  }
 
   /* ----- voice message from elia (appears only when audio exists) ----- */
   var vm = document.getElementById("voicemsg");

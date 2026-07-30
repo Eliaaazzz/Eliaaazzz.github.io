@@ -202,6 +202,61 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.12; }
 .rv.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; } }
 
+/* ---------- load entrance: lines appear one by one ---------- */
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.tblock h1 { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 60ms; }
+.tblock .role { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 160ms; }
+.tblock .cta { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 260ms; }
+.tblock .photo { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 340ms; }
+.tblock .meta { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 420ms; }
+.crumbs-row { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 500ms; }
+.ticker { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 560ms; }
+.pstrip h1 { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 60ms; }
+.pstrip .cell { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 180ms; }
+.page-dek { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 240ms; }
+.post-head .crumb { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 60ms; }
+.post-head h1 { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 150ms; }
+.post-head .dek { animation: rise 550ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 260ms; }
+.post-meta { animation: rise 500ms cubic-bezier(0.2, 0.6, 0.2, 1) backwards 360ms; }
+
+/* ---------- reading progress (posts) ---------- */
+
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: var(--lime);
+  z-index: 80;
+}
+
+/* ---------- language toggle + chinese mode ---------- */
+
+.lang-btn {
+  display: grid;
+  place-items: center;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  padding: 0 0.35rem;
+  border: 2px solid var(--frame);
+  background: var(--paper);
+  color: var(--ink2);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.lang-btn:hover { background: var(--lime); color: var(--lime-ink); }
+
+html.zh {
+  --sans: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --disp: "Bricolage Grotesque", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+html.zh .gs { font-family: Georgia, "Songti SC", "STSong", SimSun, serif; font-style: normal; }
+html.zh .manifesto p, html.zh .foot-big { letter-spacing: 0.01em; line-height: 1.3; }
+html.zh .tblock .role, html.zh .page-dek, html.zh .sim-note { line-height: 1.85; }
+
 /* ---------- topbar (sub-pages) ---------- */
 
 .topbar {
