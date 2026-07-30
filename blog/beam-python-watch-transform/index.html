@@ -191,6 +191,34 @@
           <code>Watch(poll_fn, ...)</code>. Same semantics, same building blocks — a poll function, a
           poll interval, termination conditions — with Python idioms where they earn their keep.</p>
 
+          <h3 id="try-it">Try it, right here</h3>
+
+          <p>Before any code: this widget <em>is</em> the semantics you just read, running in your
+          browser. Drop files into the bucket, drop a duplicate, and watch the poll loop emit each
+          one exactly once.</p>
+
+          <div class="sim" id="sim">
+            <div class="sim-head">
+              <span class="t">Watch(<b>list_bucket</b>, poll_interval=3s) — emits each file <b>exactly once</b></span>
+              <span class="wm" id="wm">watermark —:—:—</span>
+            </div>
+            <div class="sim-body">
+              <div class="lane"><h4>BUCKET ./landing</h4><div id="bucket"></div></div>
+              <div class="pipe"><span class="arrow">──── poll ───▶</span><span class="lbl" id="pollno">poll #0</span></div>
+              <div class="lane"><h4>EMITTED (DOWNSTREAM)</h4><div id="out"></div></div>
+            </div>
+            <div class="sim-log" id="log">standing by — drop a file into the bucket.</div>
+            <div class="sim-controls">
+              <button class="btn primary" id="add" type="button">+ drop new file</button>
+              <button class="btn" id="dup" type="button">+ drop duplicate</button>
+              <span class="hint">dedup = blake2b(key) against checkpointed state</span>
+            </div>
+          </div>
+
+          <p class="sim-note">Every poll re-lists the whole bucket, but state remembers what was
+          emitted — duplicates are struck, and a crash-restart wouldn't re-emit. The rest of this
+          post builds the real thing.</p>
+
           <h2 id="meet-the-api"><a href="#meet-the-api">Meet the Python API</a></h2>
 
           <p>The whole public surface is small enough to hold in your head:</p>

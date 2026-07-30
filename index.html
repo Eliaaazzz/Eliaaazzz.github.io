@@ -98,27 +98,38 @@
     </div>
 
     <section class="fig" aria-labelledby="fig0">
-      <div class="fig-cap" id="fig0"><span class="no">FIG. 0</span><span>live — the Watch transform I merged into Beam (PR #39023). feed it.</span></div>
-      <div class="sim" id="sim">
-        <div class="sim-head">
-          <span class="t">Watch(<b>list_bucket</b>, poll_interval=3s) — emits each file <b>exactly once</b></span>
-          <span class="wm" id="wm">watermark —:—:—</span>
-        </div>
-        <div class="sim-body">
-          <div class="lane"><h4>BUCKET ./landing</h4><div id="bucket"></div></div>
-          <div class="pipe"><span class="arrow">──── poll ───▶</span><span class="lbl" id="pollno">poll #0</span></div>
-          <div class="lane"><h4>EMITTED (DOWNSTREAM)</h4><div id="out"></div></div>
-        </div>
-        <div class="sim-log" id="log">standing by — drop a file into the bucket.</div>
-        <div class="sim-controls">
-          <button class="btn primary" id="add" type="button">+ drop new file</button>
-          <button class="btn" id="dup" type="button">+ drop duplicate</button>
-          <span class="hint">dedup = blake2b(key) against checkpointed state</span>
+      <div class="fig-cap" id="fig0"><span class="no">FIG. 0</span><span>the pipeline so far — still streaming</span></div>
+      <div class="journey" id="journey">
+        <div class="j-wrap">
+          <div class="j-line" aria-hidden="true"><span class="j-dot"></span></div>
+          <ol class="j-nodes">
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/unimelb.png" alt="University of Melbourne" width="64" height="64"></span>
+              <b>2024</b><span class="j-t">BSc computer science, University of Melbourne</span>
+            </li>
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/metriful.png" alt="Metriful" width="64" height="64"></span>
+              <b>2025</b><span class="j-t">Metriful — AI nutrition app, solo on the App Store</span>
+            </li>
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/gsoc.png" alt="Google Summer of Code" width="64" height="64"></span>
+              <b>dec 2025</b><span class="j-t">selected — Google Summer of Code, Apache Beam</span>
+            </li>
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/beamwide.png" alt="Apache Beam" width="64" height="64"></span>
+              <b>2026</b><span class="j-t">15 PRs merged — unbounded sources &amp; Watch</span>
+            </li>
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/bytedance.png" alt="ByteDance" width="64" height="64"></span>
+              <b>2026</b><span class="j-t">top 5 / 100 — ByteDance AI Full-Stack Challenge</span>
+            </li>
+            <li class="j-node">
+              <span class="j-logo"><img src="/assets/img/logos/unimelb.png" alt="University of Melbourne" width="64" height="64"></span>
+              <b>now</b><span class="j-t">AI/ML research — robust ML × neurosymbolic</span>
+            </li>
+          </ol>
         </div>
       </div>
-      <p class="sim-note">This widget mirrors the real semantics: every poll re-lists the whole
-        bucket, but state remembers what was emitted — duplicates are struck, and a crash-restart
-        wouldn't re-emit. <a href="/blog/beam-python-watch-transform/">Read how the real one works →</a></p>
     </section>
 
     <section class="manifesto bleed" aria-label="Manifesto">
@@ -142,13 +153,21 @@
         <div class="row">
           <span class="when">jul 30 2026</span>
           <div class="hasico">
-            <span class="row-ico"><img src="/assets/img/logos/flink.svg" alt="" width="46" height="46" loading="lazy"></span>
-            <h3><a href="/blog/beam-python-local-flink/">Runner field notes: a local Flink cluster, then the Spark runner</a></h3>
-            <p>Two hands-on guides with raw screenshots from live runs — a real streaming job on
-              Flink 1.20 (checkpoints included), and the portable Spark loop end to end, plus the
-              unbounded-SDF gap I'm closing in <a href="https://github.com/apache/beam/pull/39331">#39331</a>.
-              Also: <a href="/blog/beam-python-spark-runner/">part 2, Spark</a>.</p>
-            <div class="refs">apache-beam · flink · spark · 15 + 14 min</div>
+            <span class="row-ico"><img src="/assets/img/logos/spark-icon.svg" alt="" width="46" height="46" loading="lazy"></span>
+            <h3><a href="/blog/beam-python-spark-runner/">Beam Python on the Spark runner — and where streaming stops</a></h3>
+            <p>The portable loop end to end on a real standalone cluster, the translation visible in
+              the Spark UI, and the unbounded-SDF gap I'm closing. Raw screenshots from a live run.</p>
+            <div class="refs">apache-beam · spark · 14 min · <span class="pr">#39331 in review</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/flink-sq.png" alt="" width="46" height="46" loading="lazy"></span>
+            <h3><a href="/blog/beam-python-local-flink/">A local Flink cluster for Beam Python, start to streaming</a></h3>
+            <p>A real streaming runner on your laptop — live job in the web UI, checkpoints with
+              actual state sizes, every WSL2 gotcha documented. Raw screenshots from a live run.</p>
+            <div class="refs">apache-beam · flink · 15 min · <span class="pr">#39191 merged</span></div>
           </div>
         </div>
         <div class="row">
@@ -199,7 +218,7 @@
         <div class="row">
           <span class="when">2026</span>
           <div class="hasico">
-            <span class="row-ico"><img src="/assets/img/logos/bytedance.svg" alt="" width="46" height="46" loading="lazy"></span>
+            <span class="row-ico"><img src="/assets/img/logos/bytedance.png" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/sde/#lumen">Lumen Auction</a></h3>
             <p>One Redis Lua script as the sole write path — 10K users, p99 5.3 ms, zero sequence
               gaps. Outstanding Project Award, top 5 / 100, ByteDance AI Full-Stack Challenge.</p>

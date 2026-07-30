@@ -86,6 +86,46 @@
     bar.appendChild(btn);
   });
 
+  /* ----- FIG. 0 — the journey timeline (home page) ----- */
+  var journey = document.getElementById("journey");
+  if (journey) {
+    var jNodes = journey.querySelectorAll(".j-node");
+    var jDot = journey.querySelector(".j-dot");
+    var jReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var jLight = function (i) {
+      jNodes[i].classList.add("lit");
+      if (jDot) jDot.style.left = (i / (jNodes.length - 1)) * 100 + "%";
+    };
+    var jAll = function () {
+      jNodes.forEach(function (n) { n.classList.add("lit"); });
+      if (jDot) jDot.style.left = "100%";
+    };
+    if (jReduced || !("IntersectionObserver" in window)) {
+      jAll();
+    } else {
+      var jStarted = false;
+      var jio = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting && !jStarted) {
+              jStarted = true;
+              jio.disconnect();
+              var i = 0;
+              jLight(0);
+              var timer = setInterval(function () {
+                i++;
+                if (i >= jNodes.length) { clearInterval(timer); return; }
+                jLight(i);
+              }, 850);
+            }
+          });
+        },
+        { threshold: 0.35 }
+      );
+      jio.observe(journey);
+    }
+  }
+
   /* ----- reading progress bar (post pages) ----- */
   if (document.querySelector(".post-layout")) {
     var bar = document.createElement("div");
