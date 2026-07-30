@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    rect { fill: #0d0d0d; }
+    text { fill: #ffffff; }
+    @media (prefers-color-scheme: light) {
+      rect { fill: #ffffff; }
+      text { fill: #111111; }
+    }
+  </style>
+  <rect width="64" height="64" rx="14"/>
+  <text x="32" y="45" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="600" font-size="40" text-anchor="middle">el</text>
+</svg>

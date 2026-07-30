@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research — Elia Liu</title>
+  <meta name="description" content="Research by Zhenyu (Elia) Liu: trustworthy and robust ML, neurosymbolic reasoning, and LLM/VLM evaluation. University of Melbourne.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/research/">
+  <meta property="og:title" content="Research — Elia Liu">
+  <meta property="og:description" content="Trustworthy and robust ML, neurosymbolic reasoning, and LLM/VLM evaluation.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://eliaaazzz.github.io/research/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/" aria-current="page">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+
+    <header class="pstrip">
+      <h1>Research</h1>
+      <div class="cell"><b>FOCUS</b>robust ML · neurosymbolic · LLM eval</div>
+      <div class="cell"><b>NAME IN PAPERS</b>Zhenyu Liu (Elia)</div>
+    </header>
+    <p class="page-dek">
+      My habit: take a claim the field treats as settled, design the cheapest experiment that could
+      break it, and follow the data — pre-registered protocols, real ground truth, controls that
+      hold everything else constant.
+    </p>
+
+    <section class="fig" aria-labelledby="figproj">
+      <div class="fig-cap" id="figproj"><span class="no">FIG. 1</span><span>projects</span></div>
+      <div class="rows">
+
+        <article class="row" id="neurosymbolic">
+          <span class="when">jul 2026 — now<span class="place">SCIE30001 · UniMelb</span></span>
+          <div>
+            <h3>Certified robustness meets neurosymbolic reasoning</h3>
+            <p>Undergraduate researcher, co-supervised by Prof. Toby Murray &amp; Dr Aaron Bembenek</p>
+            <ul>
+              <li>How can differentiable logic programming (<strong>Scallop</strong>) compose with
+                <strong>globally-robust neural networks</strong> to extend formal robustness guarantees
+                beyond purely neural models?</li>
+              <li>Grounding open questions in the core literature — Huang et al., <em>Scallop</em>
+                (NeurIPS 2021); Leino et al., <em>Globally-Robust Neural Networks</em> (ICML 2021).</li>
+            </ul>
+            <div class="refs">scallop · rust · pytorch · certified-robustness</div>
+          </div>
+        </article>
+
+        <article class="row" id="compomole">
+          <span class="when">jul 2026 — now<span class="place">independent · manuscript in prep</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/compomole">Compositional generalisation in LLMs — a diagnostic on HotMoE (AAAI 2026)</a></h3>
+            <p>Do models that master every skill also master their compositions? Often: exactly no.</p>
+            <ul>
+              <li><strong>The compositional collapse survives scale.</strong> Five deterministic
+                text-transform skills with program-checkable ground truth, swept 0.5B → 7B across two
+                model families (three seeds, frozen predictions). At 7B the atomic skills saturate, yet
+                many held-out compositions sit at <em>exactly 0.000</em> while the same checkpoint
+                executes each step perfectly in isolation; a dense-LoRA control reproduces the pattern.</li>
+              <li><strong>Traced to generation order, then reversed.</strong> A matched intervention flips
+                composition from 0.68 to 0.000; supervising an explicit intermediate state revives the
+                dead cells (0.000 → 0.975), replicating on Mistral-7B.</li>
+            </ul>
+            <div class="refs">llm-evaluation · mixture-of-experts · lora</div>
+          </div>
+        </article>
+
+        <article class="row" id="l2-dialogue">
+          <span class="when">jul 2026 — now<span class="place">independent</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/l2-dialogue-fidelity-pilot">Distribution-level fidelity of LLM-simulated L2 dialogue</a></h3>
+            <p>A question Gao et al. (ACL 2025) leave open: are L1-conditioned simulated learner
+              populations distinguishable at all?</p>
+            <ul>
+              <li>MMD permutation tests on dialogue-level embeddings (from-scratch DUAL
+                reimplementation), seven L1s × four LLMs; a native-speaker control separates from every
+                L1 (28/28) at empirical Type-I 0.050.</li>
+              <li><strong>Model identity dominates the simulated L1</strong> — within GPT-4o and
+                DeepSeek-V3 no L1 pair is distinguishable after Bonferroni (0/21 each), while the same
+                L1 across models differs in 24/42 cases with 2–5× larger MMD².</li>
+            </ul>
+            <div class="refs">kernel-methods · mmd · hypothesis-testing</div>
+          </div>
+        </article>
+
+        <article class="row" id="cato-v">
+          <span class="when">jan — mar 2026<span class="place">with two collaborators</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/FMD_ICANN">Training-free financial misinformation detection (CATO-V)</a></h3>
+            <p>Beat the fine-tuned state of the art without training a thing.</p>
+            <ul>
+              <li>A DeepSeek V4 pipeline — hybrid retrieval, self-consistency voting, disagreement
+                arbitration, sufficiency-gated abstention — reaches <strong>77.2% accuracy / 0.745
+                macro-F1</strong> on the 1,304-claim Fin-Fact test set, above fine-tuned FMDLlama3 on
+                all eight metrics, in 3.7 minutes at $0.39.</li>
+              <li><strong>Recovered the hidden test labels to evaluate honestly</strong> — matched all
+                1,953 training claims to sources, recovered all 1,304 held-out labels, documented the
+                protocol.</li>
+            </ul>
+            <div class="refs">llm-systems · retrieval · self-consistency</div>
+          </div>
+        </article>
+
+        <article class="row" id="portion-bias">
+          <span class="when">oct 2025 — now<span class="place">Metriful · independent</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/Metriful">Portion-size bias in vision-language nutrition estimation</a></h3>
+            <p>Diagnosed a bias that flips sign with portion size, then fixed it with depth.</p>
+            <ul>
+              <li>Across five public benchmarks (~1,300 weighed dishes), Gemini vision models
+                <strong>over-estimate small portions and under-estimate large ones</strong> by up to 34%.</li>
+              <li>A depth-grounded corrector roughly halves median calorie error (51% → 26%) under a
+                sub-5-second budget — where monocular relative depth cannot substitute. Ships in
+                <a href="/sde/#metriful">Metriful</a>.</li>
+            </ul>
+            <div class="refs">vlm-evaluation · lidar-depth · benchmarks</div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section class="fig" aria-labelledby="figedu">
+      <div class="fig-cap" id="figedu"><span class="no">FIG. 2</span><span>education &amp; methods</span></div>
+      <div class="spec">
+        <div class="spec-row"><span class="k">education</span><span class="v">BSc, Computer Science — University of Melbourne, 2024–2026. Software Modelling &amp; Design 84 · Computer Systems 82 · OOSD 82 · Machine Learning 79.</span></div>
+        <div class="spec-row"><span class="k">methods</span><span class="v">Kernel methods &amp; hypothesis testing (MMD/HSIC) · experimental design &amp; ablations · pre-registration · program-checkable ground truth</span></div>
+        <div class="spec-row"><span class="k">systems</span><span class="v">Python (NumPy, PyTorch) · Java · Go · C/C++ · SQL · Docker · Linux · LaTeX · GCP/AWS</span></div>
+        <div class="spec-row"><span class="k">engineering</span><span class="v">The systems half lives on the <a href="/sde/">SDE page</a> — Apache Beam streaming internals for GSoC 2026.</span></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>

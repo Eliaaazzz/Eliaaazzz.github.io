@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Elia Liu — writing</title>
+    <link>https://eliaaazzz.github.io/</link>
+    <description>Long-form tutorials and build notes: streaming Python on Apache Beam, and other systems built by hand.</description>
+    <language>en</language>
+    <atom:link href="https://eliaaazzz.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>Watch: a polling transform for things that grow</title>
+      <link>https://eliaaazzz.github.io/blog/beam-python-watch-transform/</link>
+      <guid>https://eliaaazzz.github.io/blog/beam-python-watch-transform/</guid>
+      <pubDate>Thu, 30 Jul 2026 00:00:00 GMT</pubDate>
+      <description>Porting Apache Beam's Watch transform from Java to Python: polling Splittable DoFns, dedup by hash, termination conditions — and how to watch a directory for new files, forever. GSoC 2026, part 2.</description>
+    </item>
+    <item>
+      <title>Teaching Python pipelines to never stop</title>
+      <link>https://eliaaazzz.github.io/blog/beam-python-unbounded-sources/</link>
+      <guid>https://eliaaazzz.github.io/blog/beam-python-unbounded-sources/</guid>
+      <pubDate>Tue, 28 Jul 2026 00:00:00 GMT</pubDate>
+      <description>For a decade, Apache Beam's Python SDK had no unbounded sources. A from-zero tutorial on streaming, Splittable DoFns, and the UnboundedSource API built for GSoC 2026 — validated on four runners.</description>
+    </item>
+  </channel>
+</rss>

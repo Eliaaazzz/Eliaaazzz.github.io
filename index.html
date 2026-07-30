@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elia Liu — software engineer &amp; researcher</title>
+  <meta name="description" content="Elia (Zhenyu) Liu — GSoC 2026 contributor at Apache Beam, final-year CS at the University of Melbourne. Streaming systems, ML research, and a live demo of the Watch transform.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/">
+  <meta property="og:title" content="Elia Liu — software engineer &amp; researcher">
+  <meta property="og:description" content="I taught Apache Beam's Python SDK to read data that never ends. Streaming systems, ML research, sub-millisecond hot paths.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://eliaaazzz.github.io/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Elia Liu",
+    "alternateName": "Zhenyu Liu",
+    "url": "https://eliaaazzz.github.io/",
+    "sameAs": [
+      "https://github.com/Eliaaazzz",
+      "https://www.linkedin.com/in/elia-liu"
+    ],
+    "jobTitle": "Software Engineer",
+    "affiliation": { "@type": "CollegeOrUniversity", "name": "University of Melbourne" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <main id="main" class="shell">
+
+    <header class="tblock">
+      <div class="id">
+        <h1>Elia Liu<span class="lt">.</span></h1>
+        <p class="role">I taught <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>'s
+          Python SDK to read data that never ends — unbounded sources &amp; the Watch transform,
+          Google Summer of Code 2026. Streaming systems, ML research, sub-millisecond hot paths.</p>
+      </div>
+      <div class="meta">
+        <div><b>SHEET</b>eliaaazzz.github.io</div>
+        <div><b>REVISION</b>2026-07 · GSoC edition</div>
+        <div><b>LOCATION</b>Melbourne, AU</div>
+        <div><b>STATUS</b>open to 2027 grad roles</div>
+      </div>
+    </header>
+
+    <div class="crumbs-row">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+        <a href="https://github.com/Eliaaazzz">github ↗</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin ↗</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+
+    <section class="fig" aria-labelledby="fig0">
+      <div class="fig-cap" id="fig0"><span class="no">FIG. 0</span><span>live — the Watch transform I merged into Beam (PR #39023). feed it.</span></div>
+      <div class="sim" id="sim">
+        <div class="sim-head">
+          <span class="t">Watch(<b>list_bucket</b>, poll_interval=3s) — emits each file <b>exactly once</b></span>
+          <span class="wm" id="wm">watermark —:—:—</span>
+        </div>
+        <div class="sim-body">
+          <div class="lane"><h4>BUCKET ./landing</h4><div id="bucket"></div></div>
+          <div class="pipe"><span class="arrow">──── poll ───▶</span><span class="lbl" id="pollno">poll #0</span></div>
+          <div class="lane"><h4>EMITTED (DOWNSTREAM)</h4><div id="out"></div></div>
+        </div>
+        <div class="sim-log" id="log">standing by — drop a file into the bucket.</div>
+        <div class="sim-controls">
+          <button class="btn primary" id="add" type="button">+ drop new file</button>
+          <button class="btn" id="dup" type="button">+ drop duplicate</button>
+          <span class="hint">dedup = blake2b(key) against checkpointed state</span>
+        </div>
+      </div>
+      <p class="sim-note">This widget mirrors the real semantics: every poll re-lists the whole
+        bucket, but state remembers what was emitted — duplicates are struck, and a crash-restart
+        wouldn't re-emit. <a href="/blog/beam-python-watch-transform/">Read how the real one works →</a></p>
+    </section>
+
+    <section class="fig" aria-labelledby="fig1">
+      <div class="fig-cap" id="fig1"><span class="no">FIG. 1</span><span>writing</span><a href="/blog/">all posts →</a></div>
+      <div class="rows">
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-watch-transform/">Watch: a polling transform for things that grow</a></h3>
+            <p>Polling SDFs, dedup by hash, termination conditions — and watching a bucket for new
+              files, forever. Part 2 of the GSoC streaming story.</p>
+            <div class="refs">apache-beam · 30 min · <span class="pr">#39023 merged</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">jul 28 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-unbounded-sources/">Teaching Python pipelines to never stop</a></h3>
+            <p>The Python SDK had no unbounded sources for a decade. A from-zero tutorial on streaming,
+              Splittable DoFns, and the API I shipped — validated on four runners.</p>
+            <div class="refs">apache-beam · 35 min · <span class="pr">#38724 merged</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fig" aria-labelledby="fig2">
+      <div class="fig-cap" id="fig2"><span class="no">FIG. 2</span><span>selected work</span><a href="/sde/">the SDE page →</a></div>
+      <div class="rows">
+        <div class="row">
+          <span class="when">2025 — now</span>
+          <div>
+            <h3><a href="/sde/#beam">Apache Beam — GSoC 2026</a></h3>
+            <p>First public UnboundedSource API in the Python SDK; ML-inference batching
+              13.0× → 1.07× padding; Flink SDF-state OOM fix. 15 merged PRs, reviewed by the
+              Beam PMC Chair and Google engineers.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">2025 — now</span>
+          <div>
+            <h3><a href="/sde/#metriful">Metriful</a></h3>
+            <p>AI nutrition app on the Apple App Store, built solo — Gemini Vision + LiDAR depth
+              geometry + USDA retrieval, under 3 seconds per meal.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">2026</span>
+          <div>
+            <h3><a href="/sde/#lumen">Lumen Auction</a></h3>
+            <p>One Redis Lua script as the sole write path — 10K users, p99 5.3 ms, zero sequence
+              gaps. Outstanding Project Award, top 5 / 100, ByteDance AI Full-Stack Challenge.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fig" aria-labelledby="fig3">
+      <div class="fig-cap" id="fig3"><span class="no">FIG. 3</span><span>research</span><a href="/research/">the research page →</a></div>
+      <div class="rows">
+        <div class="row">
+          <span class="when">2026 — now</span>
+          <div>
+            <h3><a href="/research/#compomole">Compositional collapse in LLMs</a></h3>
+            <p>Held-out skill compositions score exactly 0.000 while each atomic skill saturates —
+              traced to generation order, then reversed (0.000 → 0.975). Manuscript in preparation.</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">2026 — now</span>
+          <div>
+            <h3><a href="/research/#neurosymbolic">Certified robustness × neurosymbolic reasoning</a></h3>
+            <p>With Prof. Toby Murray &amp; Dr Aaron Bembenek at the University of Melbourne — composing
+              differentiable Datalog (Scallop) with globally-robust networks.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>

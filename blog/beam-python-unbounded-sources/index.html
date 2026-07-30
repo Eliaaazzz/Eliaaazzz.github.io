@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teaching Python pipelines to never stop — Elia Liu</title>
+  <meta name="description" content="For a decade, Apache Beam's Python SDK had no unbounded sources. A from-zero tutorial on streaming, Splittable DoFns, and the UnboundedSource API I designed and shipped for GSoC 2026 — validated on four runners.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/beam-python-unbounded-sources/">
+  <meta property="og:title" content="Teaching Python pipelines to never stop">
+  <meta property="og:description" content="Streaming from zero: Splittable DoFns and the UnboundedSource API for Apache Beam's Python SDK, built for GSoC 2026.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/beam-python-unbounded-sources/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta property="article:published_time" content="2026-07-28">
+  <meta property="article:author" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/vendor/highlight.min.js"></script>
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Teaching Python pipelines to never stop",
+    "description": "Streaming from zero: Splittable DoFns and the UnboundedSource API for Apache Beam's Python SDK, built for GSoC 2026.",
+    "datePublished": "2026-07-28",
+    "author": { "@type": "Person", "name": "Elia Liu", "url": "https://eliaaazzz.github.io/" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <article>
+
+      <header class="post-head shell">
+        <p class="crumb"><a href="/blog/">blog</a> / apache beam · gsoc 2026 · part 1 of 2</p>
+        <h1>Teaching Python pipelines to never stop</h1>
+        <p class="dek">
+          For a decade, Apache Beam's Python SDK had no way to read a custom real-time stream —
+          that was a Java-only superpower. For Google Summer of Code 2026 I designed and shipped the
+          SDK's first public <code>UnboundedSource</code> API. This is the full story, written so you
+          can follow it with zero streaming background: what streaming actually is, how Splittable
+          DoFns work, how to build your own source, and how it held up across four runners.
+        </p>
+        <div class="post-meta">
+          <time datetime="2026-07-28">July 28, 2026</time><span class="sep">·</span>
+          <span>35 min read</span><span class="sep">·</span>
+          <span>python</span><span class="sep">·</span>
+          <span>streaming</span><span class="sep">·</span>
+          <span>splittable-dofn</span>
+        </div>
+      </header>
+
+      <div class="post-layout shell">
+
+        <details class="toc-mobile">
+          <summary>Contents</summary>
+          <ol>
+            <li><a href="#the-gap">The decade-old gap</a></li>
+            <li><a href="#beam-in-five-minutes">Beam, in five minutes</a></li>
+            <li><a href="#bounded-vs-unbounded">What makes streaming hard</a></li>
+            <li><a href="#splittable-dofn">Splittable DoFn, gently</a></li>
+            <li><a href="#the-design">The design</a></li>
+            <li><a href="#build-a-source">Tutorial: build a source</a></li>
+            <li><a href="#run-it">Run it on three runners</a></li>
+            <li><a href="#internals">What the wrapper does for you</a></li>
+            <li><a href="#pitfalls">Pitfalls I hit for you</a></li>
+            <li><a href="#validation">Proof: four runners</a></li>
+            <li><a href="#what-landed">What landed, what's next</a></li>
+            <li><a href="#links">Links &amp; thanks</a></li>
+          </ol>
+        </details>
+
+        <div class="prose">
+
+          <h2 id="the-gap"><a href="#the-gap">The decade-old gap</a></h2>
+
+          <p>Here is a sentence that surprised me when I first read it: until June 2026, if you wanted an
+          <a href="https://beam.apache.org/">Apache Beam</a> pipeline written in Python to read from
+          <em>your own</em> real-time system — an internal message queue, a change-data-capture feed,
+          a socket of sensor readings — there was no supported way to do it.</p>
+
+          <p>Java users have had one since Beam's beginning: a class called
+          <code>UnboundedSource</code>, the thing under the hood of connectors like KafkaIO. Python
+          users had <code>BoundedSource</code> for finite data and… that was it.
+          <a href="https://github.com/apache/beam/issues/19137">Issue #19137</a> — <em>"Add
+          UnboundedSource interface and SDF wrapper for Python SDK"</em> — sat open for years. The
+          official docs for writing Python connectors described bounded reads only.</p>
+
+          <p>For Google Summer of Code 2026, working with my mentor Yi Hu at Google, I closed that gap:
+          <a href="https://github.com/apache/beam/pull/38724">PR #38724</a> added the Python SDK's first
+          public <code>UnboundedSource</code> API — an <code>UnboundedSource</code> /
+          <code>UnboundedReader</code> / <code>CheckpointMark</code> trio with Java-aligned semantics,
+          executed by a single Splittable DoFn wrapper — and it merged after review by the Beam PMC
+          Chair. It runs, verified, on DirectRunner, Prism, Flink, and Google Cloud Dataflow.</p>
+
+          <p>This post is the tutorial I wish had existed when I started. It assumes nothing: not Beam,
+          not streaming, not distributed systems. If you already know Beam, jump to
+          <a href="#splittable-dofn">Splittable DoFn</a> or straight to
+          <a href="#build-a-source">the tutorial</a>.</p>
+
+          <h2 id="beam-in-five-minutes"><a href="#beam-in-five-minutes">Beam, in five minutes</a></h2>
+
+          <p>Apache Beam is a way to describe a data processing job <em>once</em> and run it on many
+          different engines. You write a <strong>pipeline</strong> — a graph of processing steps — in
+          Python (or Java, or Go), and hand it to a <strong>runner</strong>: your laptop
+          (DirectRunner), an Apache Flink or Spark cluster, or Google Cloud Dataflow. Same code,
+          different engine.</p>
+
+          <p>Three words carry most of the model:</p>
+
+          <ul>
+            <li>A <strong><code>PCollection</code></strong> is a dataset flowing through the pipeline —
+              lines of a file, events from a queue.</li>
+            <li>A <strong><code>PTransform</code></strong> is a step that turns one
+              <code>PCollection</code> into another — parse, filter, count.</li>
+            <li>A <strong>runner</strong> executes the graph, splitting work across many machines.</li>
+          </ul>
+
+          <p>A complete pipeline, so you've seen one:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">wordcount.py</span></div>
+            <pre><code class="language-python">import apache_beam as beam
+
+with beam.Pipeline() as p:
+  (p
+   | beam.io.ReadFromText('shakespeare.txt')      # PCollection of lines
+   | beam.FlatMap(lambda line: line.split())      # PCollection of words
+   | beam.combiners.Count.PerElement()            # PCollection of (word, n)
+   | beam.Map(print))</code></pre>
+          </div>
+
+          <p>Read it top to bottom: read a file, split into words, count each word, print. The
+          <code>|</code> is just Beam's way of chaining steps. Run it and the process finishes when the
+          file is exhausted — because a file <em>can</em> be exhausted. Hold that thought.</p>
+
+          <h2 id="bounded-vs-unbounded"><a href="#bounded-vs-unbounded">What makes streaming hard</a></h2>
+
+          <p>Data comes in two shapes. A <strong>bounded</strong> dataset is finite — yesterday's logs,
+          a database snapshot. You can read it, reach the end, and declare victory. An
+          <strong>unbounded</strong> dataset has no end — the clicks are still happening, the sensors
+          are still measuring. A pipeline reading it should, in principle, run forever.</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 170" role="img" aria-labelledby="d1-title" style="max-width:640px">
+              <title id="d1-title">Bounded data has an end; unbounded data keeps arriving past "now".</title>
+              <text class="d-ink3" x="24" y="30" font-size="11">BOUNDED — a file: read it, reach the end, stop</text>
+              <line class="d-line" x1="24" y1="52" x2="430" y2="52" stroke-width="1.5"/>
+              <g class="d-ink2">
+                <circle cx="50" cy="52" r="4" fill="currentColor"/>
+                <circle cx="95" cy="52" r="4" fill="currentColor"/>
+                <circle cx="140" cy="52" r="4" fill="currentColor"/>
+                <circle cx="185" cy="52" r="4" fill="currentColor"/>
+                <circle cx="230" cy="52" r="4" fill="currentColor"/>
+                <circle cx="275" cy="52" r="4" fill="currentColor"/>
+                <circle cx="320" cy="52" r="4" fill="currentColor"/>
+              </g>
+              <line class="d-line" x1="430" y1="40" x2="430" y2="64" stroke-width="2"/>
+              <text class="d-ink3" x="440" y="56" font-size="11">EOF</text>
+
+              <text class="d-ink3" x="24" y="106" font-size="11">UNBOUNDED — a stream: there is no end, only "so far"</text>
+              <line class="d-line" x1="24" y1="128" x2="560" y2="128" stroke-width="1.5" stroke-dasharray="1 0"/>
+              <g class="d-ink2">
+                <circle cx="50" cy="128" r="4" fill="currentColor"/>
+                <circle cx="98" cy="128" r="4" fill="currentColor"/>
+                <circle cx="132" cy="128" r="4" fill="currentColor"/>
+                <circle cx="197" cy="128" r="4" fill="currentColor"/>
+                <circle cx="238" cy="128" r="4" fill="currentColor"/>
+                <circle cx="301" cy="128" r="4" fill="currentColor"/>
+                <circle cx="344" cy="128" r="4" fill="currentColor"/>
+                <circle cx="418" cy="128" r="4" fill="currentColor"/>
+              </g>
+              <g class="d-accent">
+                <circle cx="472" cy="128" r="4" fill="currentColor"/>
+                <circle cx="514" cy="128" r="4" fill="currentColor"/>
+                <circle cx="548" cy="128" r="4" fill="currentColor"/>
+              </g>
+              <line class="d-accent-stroke" x1="445" y1="114" x2="445" y2="142" stroke-width="2"/>
+              <text class="d-accent" x="432" y="160" font-size="11">now</text>
+              <text class="d-ink3" x="470" y="106" font-size="11">still arriving…</text>
+            </svg>
+            <figcaption>The whole problem in one picture: with a stream, "done" is never an option.</figcaption>
+          </figure>
+
+          <p>Running forever sounds simple — just loop, right? — until you ask the operational
+          questions. Any real answer to "read a stream inside a distributed engine" has to solve four
+          problems at once:</p>
+
+          <ul>
+            <li><strong>Parallelism.</strong> One Python process can't drink a firehose. The read must
+              split into independent pieces (think: one per Kafka partition) that different workers own.</li>
+            <li><strong>Checkpointing.</strong> Workers crash. Machines get preempted. After a restart,
+              the read must resume <em>exactly</em> where it left off — no lost records, no duplicates.</li>
+            <li><strong>Watermarks.</strong> If you're counting events "per minute", when is the
+              14:03 minute <em>complete</em>? A watermark is the source's running promise:
+              <em>"you will not see records with event times earlier than T from me again."</em>
+              It's what lets time-based windows ever fire.</li>
+            <li><strong>Yielding.</strong> When the stream is quiet, the reader must give the worker
+              back — and be resumed later — instead of hogging a thread in a spin loop.</li>
+          </ul>
+
+          <p>Java's <code>UnboundedSource</code> API is a checklist of exactly these concerns. The
+          Python SDK never got that class — and by the time anyone might have ported it, Beam had
+          moved to a newer, more general engine for all sources. To understand what I actually built,
+          you need to meet that engine.</p>
+
+          <h2 id="splittable-dofn"><a href="#splittable-dofn">Splittable DoFn, gently</a></h2>
+
+          <p>A regular <code>DoFn</code> (the function inside a <code>ParDo</code> step) is atomic: it
+          takes an element, does its work, returns. The runner's only knobs are "run it" and "run it
+          again". That's fine when each element means a millisecond of work. It's terrible when one
+          element means <em>"read this entire 2 TB file"</em> — or worse, <em>"read this topic
+          forever"</em>.</p>
+
+          <p>A <strong>Splittable DoFn</strong> (SDF) fixes this by making the work itself a
+          first-class, divisible object called a <strong>restriction</strong>. For a file, the
+          restriction is a byte range <code>[0, 2TB)</code>. For our stream it will be
+          <em>"the source, from this checkpoint onward"</em>. Alongside the element, the DoFn receives
+          a <strong>restriction tracker</strong> holding that restriction, and processing becomes a
+          polite negotiation:</p>
+
+          <ol>
+            <li>Before producing each piece of output, the DoFn asks
+              <code>tracker.try_claim(position)</code> — <em>"may I process up to here?"</em></li>
+            <li>If it returns <code>True</code>, do the work and emit.</li>
+            <li>If it returns <code>False</code>, the runner has decided to take the rest of the work
+              back. Stop immediately and return.</li>
+          </ol>
+
+          <p>Why would the runner say no? Because at any moment it may <strong>split</strong> the
+          restriction into a <strong>primary</strong> (what you've claimed so far) and a
+          <strong>residual</strong> (everything after). The residual is durably saved and scheduled to
+          run later — possibly on a different machine. That one mechanism is load balancing
+          <em>and</em> checkpointing <em>and</em> crash recovery, unified:</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 218" role="img" aria-labelledby="d2-title" style="max-width:640px">
+              <title id="d2-title">A split divides a restriction into a finished primary and a residual that resumes later.</title>
+              <text class="d-ink3" x="24" y="26" font-size="11">restriction: positions 0 … ∞</text>
+              <rect class="d-box" x="24" y="40" width="592" height="34" rx="6"/>
+              <rect class="d-box-accent" x="24" y="40" width="240" height="34" rx="6"/>
+              <text class="d-ink" x="52" y="61" font-size="11">claimed: 0 … 41</text>
+              <text class="d-ink3" x="300" y="61" font-size="11">unclaimed: 42 … ∞</text>
+              <line class="d-accent-stroke" x1="264" y1="32" x2="264" y2="82" stroke-width="2"/>
+              <text class="d-accent" x="238" y="98" font-size="11">split here</text>
+
+              <path class="d-line" d="M 140 74 L 140 122" stroke-width="1.5" fill="none" marker-end="none"/>
+              <path class="d-line" d="M 450 74 L 450 122" stroke-width="1.5" fill="none"/>
+
+              <rect class="d-box" x="46" y="124" width="220" height="34" rx="6"/>
+              <text class="d-ink" x="66" y="145" font-size="11">primary [0, 42) — finishes now</text>
+
+              <rect class="d-box" x="352" y="124" width="240" height="34" rx="6"/>
+              <text class="d-ink" x="372" y="145" font-size="11">residual [42, ∞) — saved…</text>
+
+              <path class="d-line" d="M 472 158 L 472 186" stroke-width="1.5" fill="none"/>
+              <text class="d-ink2" x="356" y="204" font-size="11">…and resumed later, anywhere</text>
+            </svg>
+            <figcaption>Splitting = checkpointing. The residual <em>is</em> the checkpoint.</figcaption>
+          </figure>
+
+          <p>Three more SDF pieces complete the kit:</p>
+
+          <ul>
+            <li><strong><code>defer_remainder(delay)</code></strong> — the DoFn can split
+              <em>itself</em>: "checkpoint me here, wake me up in five seconds." This is how an
+              unbounded read politely yields when there's no data.</li>
+            <li><strong>Watermark estimators</strong> — a small object through which the DoFn reports
+              event-time progress to the runner (<code>watermark_estimator.set_watermark(t)</code>).</li>
+            <li><strong><code>@beam.DoFn.unbounded_per_element()</code></strong> — a decorator that
+              tells the runner "this DoFn may do infinite work per element," which is what makes the
+              output <code>PCollection</code> officially unbounded and the pipeline a streaming one.</li>
+          </ul>
+
+          <p>SDF is the machinery Beam recommends for every new connector. It's powerful — and, used
+          raw, it's a lot: restrictions, trackers, providers, estimators, coders for all of the above.
+          That tension is exactly where this project lives.</p>
+
+          <h2 id="the-design"><a href="#the-design">The design: a familiar API on a modern engine</a></h2>
+
+          <p>If SDF can already express unbounded reads, why build an <code>UnboundedSource</code> API
+          at all? Three reasons convinced us:</p>
+
+          <ul>
+            <li><strong>The mental model matches real systems.</strong> "A reader with a resumable
+              position that periodically snapshots a checkpoint and later acks it" <em>is</em> how a
+              Kafka consumer, a Pub/Sub subscription, or a CDC log client actually behaves. People
+              maintaining such systems shouldn't have to re-derive restriction-tracker theory to
+              connect one.</li>
+            <li><strong>A decade of Java connectors becomes portable.</strong> With matching
+              class shapes — <code>split</code>, <code>create_reader</code>, checkpoint coders,
+              watermarks — porting a Java connector to Python is mechanical rather than a redesign.</li>
+            <li><strong>The hard SDF parts get solved once, centrally.</strong> Bundle time caps,
+              reader reuse, watermark plumbing, checkpoint finalization: every connector needs them,
+              and nobody should hand-roll them per connector.</li>
+          </ul>
+
+          <p>So the shape of <a href="https://github.com/apache/beam/pull/38724">#38724</a> is: a
+          <strong>public API of three small classes</strong>, and <strong>one internal Splittable DoFn</strong>
+          that knows how to run any of them.</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 260" role="img" aria-labelledby="d3-title" style="max-width:640px">
+              <title id="d3-title">Your three classes plug into one SDF wrapper, which any runner can execute.</title>
+              <text class="d-ink3" x="24" y="24" font-size="11">YOU WRITE</text>
+              <rect class="d-box" x="24" y="34" width="180" height="130" rx="8"/>
+              <text class="d-ink" x="42" y="62" font-size="11.5" font-weight="600">UnboundedSource</text>
+              <text class="d-ink2" x="42" y="80" font-size="10.5">split() · create_reader()</text>
+              <text class="d-ink" x="42" y="106" font-size="11.5" font-weight="600">UnboundedReader</text>
+              <text class="d-ink2" x="42" y="124" font-size="10.5">start/advance · watermark</text>
+              <text class="d-ink" x="42" y="150" font-size="11.5" font-weight="600">CheckpointMark</text>
+
+              <path class="d-line" d="M 204 99 L 250 99" stroke-width="1.5"/>
+              <path class="d-line" d="M 244 93 L 252 99 L 244 105" fill="none" stroke-width="1.5"/>
+
+              <text class="d-ink3" x="252" y="24" font-size="11">THE SDK SHIPS (#38724)</text>
+              <rect class="d-box-accent" x="252" y="34" width="200" height="130" rx="8"/>
+              <text class="d-ink" x="270" y="62" font-size="11.5" font-weight="600">SDF wrapper</text>
+              <text class="d-ink2" x="270" y="82" font-size="10.5">restriction = (source, ckpt)</text>
+              <text class="d-ink2" x="270" y="99" font-size="10.5">claim loop + bundle caps</text>
+              <text class="d-ink2" x="270" y="116" font-size="10.5">reader cache · watermarks</text>
+              <text class="d-ink2" x="270" y="133" font-size="10.5">defer_remainder · finalize</text>
+              <text class="d-ink2" x="270" y="150" font-size="10.5">beam.io.Read dispatch</text>
+
+              <path class="d-line" d="M 452 99 L 498 99" stroke-width="1.5"/>
+              <path class="d-line" d="M 492 93 L 500 99 L 492 105" fill="none" stroke-width="1.5"/>
+
+              <text class="d-ink3" x="500" y="24" font-size="11">ANY RUNNER</text>
+              <rect class="d-box" x="500" y="34" width="116" height="32" rx="8"/>
+              <text class="d-ink" x="516" y="54" font-size="11">Dataflow v2</text>
+              <rect class="d-box" x="500" y="72" width="116" height="32" rx="8"/>
+              <text class="d-ink" x="516" y="92" font-size="11">Flink</text>
+              <rect class="d-box" x="500" y="110" width="116" height="32" rx="8"/>
+              <text class="d-ink" x="516" y="130" font-size="11">Prism</text>
+              <rect class="d-box" x="500" y="148" width="116" height="32" rx="8"/>
+              <text class="d-ink" x="516" y="168" font-size="11">Direct</text>
+
+              <text class="d-ink2" x="24" y="205" font-size="10.5">p | beam.io.Read(MySource())          # this one line is the whole user experience</text>
+              <text class="d-ink3" x="24" y="236" font-size="10.5">Java parity: same three concepts as org.apache.beam.sdk.io.UnboundedSource — watermark, checkpoint, split.</text>
+            </svg>
+            <figcaption>Three small classes in, one battle-tested SDF underneath, every runner out.</figcaption>
+          </figure>
+
+          <p>The concept mapping, for readers coming from Java — or from the raw-SDF world:</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Concern</th><th>Java UnboundedSource</th><th>Python (this work)</th><th>SDF concept underneath</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Parallel reads</td><td><code>split(...)</code></td><td><code>UnboundedSource.split</code></td><td>initial restriction splits</td></tr>
+                <tr><td>Resumable position</td><td><code>getCheckpointMark()</code></td><td><code>UnboundedReader.get_checkpoint_mark</code></td><td>the residual restriction</td></tr>
+                <tr><td>Ack after commit</td><td><code>CheckpointMark.finalizeCheckpoint()</code></td><td><code>CheckpointMark.finalize_checkpoint</code></td><td>bundle finalization</td></tr>
+                <tr><td>Event-time progress</td><td><code>getWatermark()</code></td><td><code>UnboundedReader.get_watermark</code></td><td>watermark estimator</td></tr>
+                <tr><td>Quiet stream</td><td><code>advance() == false</code></td><td><code>advance() -&gt; False</code></td><td><code>defer_remainder(delay)</code></td></tr>
+                <tr><td>Bundle pacing</td><td>runner-side invoker caps</td><td>wrapper caps (10k records / 10 s)</td><td>self-checkpoint</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2 id="build-a-source"><a href="#build-a-source">Tutorial: build a source from scratch</a></h2>
+
+          <p>Let's build a complete, honest unbounded source: a <strong>rate-limited counter</strong>.
+          It emits the integers <code>0, 1, 2, …</code> at a fixed rate — say five per second — each
+          stamped with an event time. It's the "hello world" of streaming, and it exercises every part
+          of the API: pacing (sometimes there's no data <em>yet</em>), checkpointing (resume mid-count),
+          watermarks (windows can fire), and even a finite end, so you can watch a streaming pipeline
+          terminate gracefully.</p>
+
+          <p>Everything below targets Beam ≥ 2.68 with the merged API
+          (<code>apache_beam.io.unbounded_source</code>). One caveat before you type: put the source in
+          its own module (here <code>ticker.py</code>), not in your main script — the
+          <a href="#pitfalls">pitfalls section</a> explains why.</p>
+
+          <h3 id="step-1">Step 1 — the checkpoint mark: "where was I?"</h3>
+
+          <p>A <code>CheckpointMark</code> is the little token of state that makes resumption possible.
+          Ours only needs one number: the last index we handed to the pipeline.</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">ticker.py — part 1</span></div>
+            <pre><code class="language-python">import time
+
+import apache_beam as beam
+from apache_beam import coders
+from apache_beam.io.unbounded_source import (
+    CheckpointMark, UnboundedReader, UnboundedSource)
+from apache_beam.utils.timestamp import (
+    MAX_TIMESTAMP, MIN_TIMESTAMP, Timestamp)
+
+# A fixed event-time origin for our ticks (2025-01-01T00:00:00Z).
+EVENT_BASE = Timestamp(1735689600)
+
+
+class TickCheckpoint(CheckpointMark):
+  """Remembers the last tick index already handed to the pipeline."""
+  def __init__(self, last_index):
+    self.last_index = last_index
+
+  def finalize_checkpoint(self):
+    # Called only AFTER the runner has durably committed the bundle
+    # containing these ticks. In a real connector this is where you
+    # acknowledge messages upstream (e.g. ack a queue, commit offsets).
+    # Our counter has nothing to ack, so we just note it happened.
+    print(f'[finalize] committed through tick {self.last_index}')</code></pre>
+          </div>
+
+          <p>That <code>finalize_checkpoint</code> hook deserves a pause, because its timing is the
+          entire point. It does <em>not</em> run when the checkpoint is created — it runs after the
+          runner has made the outputs durable. If the worker dies in between, finalize never fires, the
+          checkpoint is restored, and the records are re-read. That ordering is what makes "ack the
+          message queue" safe: you never acknowledge data the pipeline could still lose.</p>
+
+          <h3 id="step-2">Step 2 — the reader: a cursor with manners</h3>
+
+          <p>An <code>UnboundedReader</code> is a stateful cursor over the stream. The contract is
+          small but strict, and two return values mean very different things:</p>
+
+          <ul>
+            <li><code>start()</code> / <code>advance()</code> return <code>True</code> — "I've moved to
+              a new record; ask me for it."</li>
+            <li>They return <code>False</code> — "no data <em>right now</em>." Not the end of the
+              world, not the end of the stream. The wrapper will checkpoint and try again later.</li>
+          </ul>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">ticker.py — part 2</span></div>
+            <pre><code class="language-python">class TickReader(UnboundedReader):
+  """Emits tick i no earlier than (start of run) + i / rate seconds."""
+  def __init__(self, count, rate, start_index):
+    self._count = count            # how many ticks exist in total
+    self._rate = rate              # ticks per second
+    self._next = start_index       # next index to emit
+    self._current = None           # index most recently emitted
+    self._exhausted = False
+    # Pace as if tick 0 happened when the run began; resuming from a
+    # checkpoint keeps the same cadence without replaying old waits.
+    self._t0 = time.time() - start_index / rate
+
+  def start(self):
+    return self.advance()
+
+  def advance(self):
+    if self._next >= self._count:
+      self._exhausted = True       # a real stream would never do this
+      return False
+    if time.time() &lt; self._t0 + self._next / self._rate:
+      return False                 # next tick isn't due yet: "no data NOW"
+    self._current = self._next
+    self._next += 1
+    return True
+
+  def get_current(self):
+    return self._current
+
+  def get_current_timestamp(self):
+    # Event time of the current record.
+    return EVENT_BASE + self._current / self._rate
+
+  def get_watermark(self):
+    # Our promise: "no future record will be older than this."
+    if self._exhausted:
+      return MAX_TIMESTAMP         # the stream is truly over
+    if self._current is None:
+      return MIN_TIMESTAMP         # haven't read anything yet
+    return EVENT_BASE + self._current / self._rate
+
+  def get_checkpoint_mark(self):
+    last = self._current if self._current is not None else self._next - 1
+    return TickCheckpoint(last)
+
+  def close(self):
+    pass                           # a real reader closes its connection</code></pre>
+          </div>
+
+          <p>Look at <code>get_watermark</code> for a moment. For our counter the watermark simply
+          tracks the last emitted event time — ticks arrive in order, so nothing older can appear.
+          Returning <code>MAX_TIMESTAMP</code> is the special move: it tells the runner
+          <em>this reader is permanently done</em>. Every event-time window downstream can now close,
+          fire, and let the pipeline finish. A Kafka-style connector would just never return it.</p>
+
+          <h3 id="step-3">Step 3 — the source: the factory and the splitter</h3>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">ticker.py — part 3</span></div>
+            <pre><code class="language-python">class TickSource(UnboundedSource):
+  """A rate-limited counting stream: 0..count-1 at `rate` per second."""
+  def __init__(self, count=60, rate=5.0):
+    self._count = count
+    self._rate = rate
+
+  def split(self, desired_num_splits, options=None):
+    # Our ticks come from one logical stream, so keep one split.
+    # A Kafka-style source would return one sub-source per partition.
+    return [self]
+
+  def create_reader(self, options, checkpoint_mark):
+    start = 0 if checkpoint_mark is None else checkpoint_mark.last_index + 1
+    return TickReader(self._count, self._rate, start)
+
+  def get_checkpoint_mark_coder(self):
+    # How the runner serializes our checkpoint for durable storage.
+    # PickleCoder is fine to start; real connectors write a compact one.
+    return coders.PickleCoder()
+
+  def default_output_coder(self):
+    return coders.VarIntCoder()</code></pre>
+          </div>
+
+          <p><code>create_reader</code> is where recovery becomes visible: the runner hands you back
+          the last durable <code>TickCheckpoint</code>, and you position the new reader at
+          <code>last_index + 1</code>. Crash at tick 41, resume at tick 42 — no gaps, no repeats.</p>
+
+          <h3 id="step-4">Step 4 — the payoff: a streaming pipeline in one line</h3>
+
+          <p>All of that plugs into a pipeline through the ordinary <code>beam.io.Read</code>:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">run_ticker.py</span></div>
+            <pre><code class="language-python">import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.transforms import window
+
+from ticker import TickSource
+
+opts = PipelineOptions(streaming=True)
+
+with beam.Pipeline(options=opts) as p:
+  (p
+   | 'Ticks'  >> beam.io.Read(TickSource(count=60, rate=5.0))
+   | 'Window' >> beam.WindowInto(window.FixedWindows(2))   # 2s event-time windows
+   | 'One'    >> beam.Map(lambda i: ('ticks', 1))
+   | 'Count'  >> beam.CombinePerKey(sum)
+   | 'Show'   >> beam.Map(print))</code></pre>
+          </div>
+
+          <p>Sixty ticks at five per second is twelve seconds of stream; two-second windows should each
+          hold ten ticks. Run it (<code>python run_ticker.py</code>) and watch:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">output</span></div>
+            <pre><code class="language-text">('ticks', 10)
+('ticks', 10)
+('ticks', 10)
+('ticks', 10)
+('ticks', 10)
+('ticks', 10)
+[finalize] committed through tick 59</code></pre>
+          </div>
+
+          <p>Every one of those lines is a small miracle of coordination. A window like
+          <code>[00:00:02, 00:00:04)</code> fired <em>only because</em> your reader's watermark crossed
+          <code>00:00:04</code> — the runner asked your source "will there be more data before this
+          moment?", your watermark said no, and the window sealed itself. When the counter ran out and
+          the watermark jumped to <code>MAX_TIMESTAMP</code>, the final window fired and the
+          "infinite" pipeline shut down cleanly. You've just watched event time, checkpointing, and
+          termination cooperate.</p>
+
+          <div class="callout">
+            <span class="callout-label">Going parallel</span>
+            <p>To spread a source across workers, return several independent sub-sources from
+            <code>split</code>. The SDK's own test source splits the counter into even/odd sub-streams:
+            two sources with <code>modulus=2</code> and <code>residue=0,1</code>, each a complete
+            non-splittable source of its own. Beam then runs one reader per split, each with its own
+            checkpoint. Kafka's version of this sentence is "one split per partition."</p>
+          </div>
+
+          <h2 id="run-it"><a href="#run-it">Run it: same file, three engines</a></h2>
+
+          <p>The point of Beam is that <code>run_ticker.py</code> doesn't change as the engine does.</p>
+
+          <p><strong>DirectRunner</strong> (above) is what you get by default — perfect for
+          development. Two honest caveats from testing the wrapper there: the local runner ignores
+          resume <em>delays</em>, so an idle source busy-loops instead of napping between polls, and
+          it processes windows a touch eagerly. Fine for tests; not a performance preview.</p>
+
+          <p><strong>Flink</strong>, the workhorse open-source streamer. With a local Flink cluster
+          running, the same file needs only options:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">shell</span></div>
+            <pre><code class="language-bash">python run_ticker.py \
+  --runner=FlinkRunner \
+  --flink_master=localhost:8081 \
+  --environment_type=LOOPBACK \
+  --streaming</code></pre>
+          </div>
+
+          <p>Here <code>defer_remainder</code> is honored for real: an idle tick source checkpoints,
+          sleeps its poll interval, and resumes — you can watch bundles and checkpoints line up with
+          the data gaps in the Flink UI.</p>
+
+          <p><strong>Google Cloud Dataflow</strong>, the managed option, where the SDF machinery runs
+          on Runner v2:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">shell</span></div>
+            <pre><code class="language-bash">python run_ticker.py \
+  --runner=DataflowRunner \
+  --project=$PROJECT --region=us-east1 \
+  --temp_location=gs://$BUCKET/tmp \
+  --streaming --experiments=use_runner_v2 \
+  --extra_package=./dist/ticker-0.1.tar.gz   # ship ticker.py to workers!</code></pre>
+          </div>
+
+          <p>That last flag matters — workers are fresh machines that have never heard of
+          <code>ticker.py</code>. Package your source (or install it on the workers); more in
+          <a href="#pitfalls">pitfalls</a>.</p>
+
+          <h2 id="internals"><a href="#internals">What the wrapper does for you</a></h2>
+
+          <p>Between your tidy three classes and the runner sits the piece I spent most of the summer
+          on: <code>ReadFromUnboundedSource</code>, the internal SDF that executes any
+          <code>UnboundedSource</code>. What it handles is exactly the list of things you'd otherwise
+          debug at 2 a.m.:</p>
+
+          <ul>
+            <li><strong>The claim loop.</strong> Each bundle, the wrapper drives your reader —
+              <code>start</code>/<code>advance</code>, <code>try_claim</code> against the tracker,
+              emit with the record's event time, update the watermark — until the runner splits, the
+              stream goes quiet, or a cap is hit.</li>
+            <li><strong>Bundle caps: 10,000 records or 10 seconds.</strong> A firehose source would
+              otherwise keep one bundle alive forever — blocking checkpoints, watermark advancement,
+              and autoscaling signals. The wrapper self-checkpoints at either cap, mirroring the
+              Java runner's <code>OutputAndTimeBounded…Invoker</code> semantics. (The caps are
+              constructor-tunable.)</li>
+            <li><strong>Polite idling.</strong> When <code>advance()</code> returns <code>False</code>,
+              the wrapper checkpoints and schedules its own resumption via
+              <code>defer_remainder(poll_interval)</code> — one second by default — so a quiet stream
+              costs almost nothing on runners that honor resume delays.</li>
+            <li><strong>A reader cache.</strong> Resuming a residual doesn't mean reconnecting to your
+              upstream system from scratch: the wrapper parks live readers keyed by
+              (source, checkpoint) and reuses them on resume, with idle eviction (60 s) and a size cap
+              (100) as backstops. For a real connector this is the difference between "resume" and
+              "reconnect storm."</li>
+            <li><strong>Exactly-once finalization.</strong> Your <code>finalize_checkpoint</code> is
+              registered as a bundle finalizer and invoked only after the runner commits the bundle —
+              and only once, even if the same checkpoint object gets multiple chances.</li>
+            <li><strong>Watermark discipline.</strong> Your <code>get_watermark</code> feeds a manual
+              estimator with a monotonic guard, and <code>MAX_TIMESTAMP</code> cleanly ends the
+              restriction so downstream windows can close. Drain is supported by truncating the
+              remaining work.</li>
+          </ul>
+
+          <p>None of this is visible in <code>run_ticker.py</code>. That's the design working.</p>
+
+          <h2 id="pitfalls"><a href="#pitfalls">Pitfalls I hit so you don't have to</a></h2>
+
+          <p>A tutorial that skips the failure modes isn't complete. These are the walls I personally
+          walked into while validating the wrapper on real runners.</p>
+
+          <h3>1. Your source class must be importable on workers</h3>
+          <p>My first Dataflow run died with
+          <code>Can't get attribute 'TickSource' on &lt;module 'sdk_worker_main'&gt;</code>. Classes
+          defined in your launch script live in <code>__main__</code>, and remote workers reconstruct
+          objects by <em>importing</em> them — there is no <code>__main__</code> to import from. Put
+          sources in a real module and ship it (<code>--extra_package</code>, a pip install, or an
+          sdist via <code>--sdk_location</code>). This applies to every distributed runner, not just
+          Dataflow.</p>
+
+          <h3>2. DirectRunner is a simulator, not a benchmark</h3>
+          <p>The local FnApiRunner ignores <code>defer_remainder</code>'s delay — an idle source
+          resumes instantly, busy-looping through empty bundles. My trickle-feed demo cut ~176
+          checkpoints per second locally where Flink would cut ~1 per poll interval. Correctness
+          testing: great. Extrapolating performance: don't.</p>
+
+          <h3>3. Deep self-checkpoint chains can hit Python's C-recursion guard</h3>
+          <p>An unbounded SDF that self-checkpoints thousands of times in one local run eventually blew
+          up in the FnApiRunner's metrics consolidation with a <code>RecursionError</code> — each
+          sub-bundle nested another lazy <code>consolidate(chain(...))</code>, and CPython 3.12+ caps
+          C-level recursion regardless of <code>sys.setrecursionlimit</code>. Pre-existing runner
+          behavior, easy to hit once sources can checkpoint freely; keep local soak tests modest.</p>
+
+          <h3>4. Streaming capacity is regional weather</h3>
+          <p>Two Dataflow submissions failed with <code>ZONE_RESOURCE_POOL_EXHAUSTED</code> before any
+          worker started — <code>us-central1</code> was simply out of the machine type that afternoon.
+          Same job, <code>us-east1</code>: placed immediately. Region-hop before you debug your own
+          code.</p>
+
+          <h3>5. Watermarks are a promise — never take one back</h3>
+          <p>The estimator refuses watermark regressions, and it's right to: downstream state is
+          discarded the moment a window closes. Emit conservative watermarks (the oldest thing you
+          might still deliver), advance them monotonically, and treat <code>MAX_TIMESTAMP</code> as a
+          one-way door.</p>
+
+          <h2 id="validation"><a href="#validation">Proof: the same tests on four runners</a></h2>
+
+          <p>"It merged" is not the bar for an IO primitive; "it behaves identically everywhere" is.
+          The validation matrix I ran, and what each row certifies:</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Runner</th><th>Suite</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td>Direct / FnApi</td><td>36 unit + end-to-end tests (ordering, EOF windows, split unions, coders, finalize)</td><td>36 / 36 pass</td></tr>
+                <tr><td>Portable (job service)</td><td>new <code>test_unbounded_source_read</code> across 6 harness variants</td><td>6 pass, 1 env-skip</td></tr>
+                <tr><td>Prism</td><td>same portable test, SDF self-checkpoint + finalization + watermark paths</td><td>pass</td></tr>
+                <tr><td>Flink 1.20</td><td>full Python ValidatesRunner suite, LOOPBACK</td><td>174 pass / 0 fail</td></tr>
+                <tr><td>Dataflow (Runner v2)</td><td>5 end-to-end streaming jobs, each asserted by <code>assert_that</code></td><td>5 / 5 <code>JOB_STATE_DONE</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>The five Dataflow jobs each pinned down one behavior in production conditions: EOF
+          watermarks letting a <code>FixedWindows</code>+GroupByKey fire; element ordering; dispatch
+          through <code>beam.io.Read</code>'s runner-API translation; custom output-coder round-trips;
+          and an initial split whose even/odd sub-sources union back to the complete dataset.</p>
+
+          <p>And because streaming behavior is about <em>shape</em>, not just pass/fail, a
+          backlog-vs-trickle demo of the same pipeline tells the story in numbers:</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Metric</th><th>Full backlog</th><th>Trickle @ 50 rec/s</th></tr></thead>
+              <tbody>
+                <tr><td>Throughput</td><td>~33,000 elem/s (CPU-bound)</td><td>50 elem/s (source-bound)</td></tr>
+                <tr><td>Bundles cut</td><td>1</td><td>458 (one per data gap)</td></tr>
+                <tr><td>Checkpoints</td><td>1</td><td>458</td></tr>
+                <tr><td>Mean latency</td><td>0.9 ms</td><td>2.6 ms</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>Exactly what you want: with data queued up, the claim loop tears through it in one big
+          bundle; with data trickling, the wrapper checkpoints at each gap and per-record latency stays
+          in single-digit milliseconds.</p>
+
+          <h2 id="what-landed"><a href="#what-landed">What landed, and what it unlocked</a></h2>
+
+          <ul>
+            <li><a href="https://github.com/apache/beam/pull/38724"><strong>#38724</strong></a> — the
+              <code>UnboundedSource</code> API + SDF wrapper. <strong>Merged.</strong></li>
+            <li><a href="https://github.com/apache/beam/pull/38892"><strong>#38892</strong></a> — a
+              ValidatesRunner test locking the behavior in on portable runners, so every future runner
+              change is checked against it. <strong>Merged.</strong></li>
+            <li><a href="https://github.com/apache/beam/pull/39529"><strong>#39529</strong></a> — the
+              missing chapter of the official Python connector guide: how unbounded reads map onto
+              SDF. <strong>In review.</strong></li>
+            <li><a href="https://github.com/apache/beam/pull/39191"><strong>#39191</strong></a> — found
+              while soaking unbounded SDFs on Flink: every self-checkpoint leaked a Flink state entry,
+              eventually OOMing long-running streams. Fixed with a stable residual-state lifecycle.
+              <strong>Merged.</strong></li>
+            <li><a href="https://github.com/apache/beam/pull/39331"><strong>#39331</strong></a> — the
+              same self-checkpoint machinery for the portable <em>Spark</em> runner, the last big
+              engine without it. <strong>In review.</strong></li>
+          </ul>
+
+          <p>And one more thing it unlocked: once Python could run polling loops on SDF properly, it
+          became natural to port Beam's most elegant polling abstraction —
+          the <code>Watch</code> transform. That's <a href="/blog/beam-python-watch-transform/">part
+          two of this story</a>.</p>
+
+          <h2 id="links"><a href="#links">Links &amp; thanks</a></h2>
+
+          <p>All code above targets the public API in
+          <a href="https://github.com/apache/beam/blob/master/sdks/python/apache_beam/io/unbounded_source.py"><code>apache_beam/io/unbounded_source.py</code></a>.
+          The design discussion lives in <a href="https://github.com/apache/beam/pull/38724">PR #38724</a>
+          and <a href="https://github.com/apache/beam/issues/19137">issue #19137</a>; background on the
+          execution model is in Beam's
+          <a href="https://beam.apache.org/documentation/programming-guide/#splittable-dofns">Splittable DoFn guide</a>.</p>
+
+          <p>My sincere thanks to my GSoC mentor <strong>Yi Hu</strong> (Google), whose reviews made
+          every iteration sharper, to Beam PMC Chair <strong>Kenn Knowles</strong> for reviewing the
+          design, and to the Beam community for treating a student's PRs with complete seriousness.
+          Streaming Python got real this summer; I got to hold the wrench.</p>
+
+        </div>
+      </div>
+
+      <footer class="post-foot shell">
+        <a class="back" href="/blog/">← All posts</a>
+        <nav class="post-nav" aria-label="More posts">
+          <span></span>
+          <a class="next" href="/blog/beam-python-watch-transform/">
+            <span class="dir">Next · Part 2</span>
+            <span class="t">Watch: a polling transform for things that grow</span>
+          </a>
+        </nav>
+      </footer>
+
+    </article>
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SDE — Elia Liu</title>
+  <meta name="description" content="Software engineering work: Apache Beam (GSoC 2026), Metriful, Lumen Auction, Aiwason, and open-source contributions across the data ecosystem.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/sde/">
+  <meta property="og:title" content="SDE — Elia Liu">
+  <meta property="og:description" content="Streaming systems at Apache Beam, an AI nutrition app on the App Store, and a 10K-user real-time auction engine.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://eliaaazzz.github.io/sde/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/">blog</a>
+        <a href="/sde/" aria-current="page">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+
+    <header class="pstrip">
+      <h1>Software Engineering</h1>
+      <div class="cell"><b>MERGED PRS @ BEAM</b>15 (30 opened)</div>
+      <div class="cell"><b>RUNNERS VALIDATED</b>Dataflow · Flink · Prism · Direct</div>
+    </header>
+    <p class="page-dek">
+      Distributed data pipelines, GenAI-integrated products, and the occasional lock-free hot path.
+      Most of my public work lives in
+      <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>;
+      the rest is on <a href="https://github.com/Eliaaazzz">GitHub</a>.
+    </p>
+
+    <section class="fig" aria-labelledby="figexp">
+      <div class="fig-cap" id="figexp"><span class="no">FIG. 1</span><span>experience</span></div>
+      <div class="rows">
+
+        <article class="row" id="beam">
+          <span class="when">dec 2025 — now<span class="place">Apache Software Fdn.</span></span>
+          <div>
+            <h3><a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam — Google Summer of Code 2026</a></h3>
+            <p>Python SDK &amp; portable runners · mentor: Yi Hu (Google)</p>
+            <ul>
+              <li>Designed and shipped the <strong>first public UnboundedSource API in the Python SDK</strong>
+                (<a href="https://github.com/apache/beam/pull/38724">#38724</a>) — Java-aligned watermark,
+                checkpoint, and split semantics, validated on Dataflow v2, Flink (174/0), Prism, Direct.
+                <a href="/blog/beam-python-unbounded-sources/">Write-up</a>.</li>
+              <li>Ported the <strong>Watch transform</strong> as a polling Splittable DoFn
+                (<a href="https://github.com/apache/beam/pull/39023">#39023</a>), plus an O(1)
+                high-water-mark dedup cursor with 4.1× throughput, in review
+                (<a href="https://github.com/apache/beam/pull/39090">#39090</a>).
+                <a href="/blog/beam-python-watch-transform/">Write-up</a>.</li>
+              <li>Built <strong>length-, size-, and content-aware dynamic batching</strong> for ML inference
+                across 16 ModelHandlers (<a href="https://github.com/apache/beam/pull/37565">#37565</a>,
+                <a href="https://github.com/apache/beam/pull/37532">#37532</a>,
+                <a href="https://github.com/apache/beam/pull/37428">#37428</a>,
+                <a href="https://github.com/apache/beam/pull/37945">#37945</a>) — official-benchmark
+                padding waste drops from 13.0× to 1.07×.</li>
+              <li>Fixed an <strong>OOM from SDF state leakage on the Flink runner</strong>
+                (<a href="https://github.com/apache/beam/pull/39191">#39191</a>); proposed SDF
+                self-checkpointing for portable Spark
+                (<a href="https://github.com/apache/beam/pull/39331">#39331</a>).</li>
+              <li><strong>15 merged PRs</strong> across Python, Java, and four runners — reviewed by
+                Beam PMC Chair Kenn Knowles and Google engineers.</li>
+            </ul>
+            <div class="refs">python · java · splittable-dofn · flink · spark · dataflow</div>
+          </div>
+        </article>
+
+        <article class="row" id="metriful">
+          <span class="when">2025 — now<span class="place">App Store</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/Metriful">Metriful</a></h3>
+            <p>Founder &amp; full-stack engineer — AI nutrition app, one codebase for iOS and web</p>
+            <ul>
+              <li>Designed and launched solo on the <strong>Apple App Store</strong>: camera-first pipeline
+                of Gemini Vision → LiDAR/ARKit depth geometry → USDA retrieval → residual correction.</li>
+              <li>Diagnosed a systematic <strong>VLM bias that flips sign with portion size</strong>
+                (3 benchmarks, 1,200+ weighed meals); depth grounding cuts median per-meal error from
+                34% to ~25%, under 3 seconds end-to-end via hedged requests and two-tier caching.</li>
+            </ul>
+            <div class="refs">react-native · expo · spring-boot · gemini-vision · lidar · postgresql · gcp</div>
+          </div>
+        </article>
+
+        <article class="row" id="lumen">
+          <span class="when">2026<span class="place">ByteDance challenge</span></span>
+          <div>
+            <h3><a href="https://github.com/Eliaaazzz/live-auction-system">Lumen Auction</a></h3>
+            <p>Team lead &amp; backend — Outstanding Project Award, top 5 / 100</p>
+            <ul>
+              <li>Bid engine on <strong>single-threaded Redis plus one Lua script as the sole write
+                path</strong> — validation, replay-safe dedup, anti-snipe, sequencing, and event append in
+                one lock-free atomic decision. 10K-user public-internet test holds
+                <strong>p95 0.46 ms / p99 5.3 ms, zero sequence gaps</strong>.</li>
+              <li>Led the Go gateway, core services, and deployment; one room sustains
+                <strong>10,000 concurrent WebSockets</strong> with dual-lane backpressure and
+                HMAC-SHA-256 chained-hash replay auditing.</li>
+            </ul>
+            <div class="refs">go · redis+lua · mysql · websockets · doubao</div>
+          </div>
+        </article>
+
+        <article class="row" id="aiwason">
+          <span class="when">may — oct 2025<span class="place">Melbourne</span></span>
+          <div>
+            <h3><a href="https://aiwasontech.com">Aiwason</a></h3>
+            <p>Software engineer — enterprise SaaS web platform</p>
+            <ul>
+              <li>Built and deployed the platform for an enterprise SaaS serving
+                <strong>3,000+ clients</strong> including Fortune 500 companies — Next.js, strictly-typed
+                TypeScript.</li>
+              <li>Cut page load 40% via SSR, code splitting, and image optimization; 95+ Lighthouse,
+                100% SEO.</li>
+            </ul>
+            <div class="refs">next.js · typescript · tailwind</div>
+          </div>
+        </article>
+
+        <article class="row" id="research-intern">
+          <span class="when">jul 2026 — now<span class="place">Uni. of Melbourne</span></span>
+          <div>
+            <h3><a href="/research/#neurosymbolic">Research intern — robust ML &amp; neurosymbolic systems</a></h3>
+            <p>With Prof. Toby Murray &amp; Dr Aaron Bembenek</p>
+            <ul>
+              <li>Prototyping neurosymbolic pipelines in Scallop (differentiable Datalog, Rust core),
+                toward combining certified-robust networks with symbolic reasoning — details on the
+                <a href="/research/">research page</a>.</li>
+            </ul>
+            <div class="refs">scallop · rust · pytorch · datalog</div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section class="fig" aria-labelledby="figoss">
+      <div class="fig-cap" id="figoss"><span class="no">FIG. 2</span><span>open source, beyond GSoC</span></div>
+      <div class="rows">
+        <div class="row">
+          <span class="when">2026</span>
+          <div>
+            <h3><a href="https://github.com/apache/iotdb/pull/17386">Apache IoTDB</a></h3>
+            <p>Integrated the MOMENT time-series foundation model into AINode
+              (<a href="https://github.com/apache/iotdb/pull/17386">#17386</a>).</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">2026</span>
+          <div>
+            <h3><a href="https://github.com/run-llama/llama_index/pull/20423">LlamaIndex</a></h3>
+            <p>Java AST chunking tests for CodeSplitter with tree-sitter-verified method and class
+              boundaries (<a href="https://github.com/run-llama/llama_index/pull/20423">#20423</a>).</p>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">2026</span>
+          <div>
+            <h3>Apache Beam, pre-GSoC</h3>
+            <p>DoFnInvoker generic-type cache collision
+              (<a href="https://github.com/apache/beam/pull/37355">#37355</a>) ·
+              ExternalTransform.expand fix
+              (<a href="https://github.com/apache/beam/pull/37299">#37299</a>) ·
+              ClickHouseIO DateTime64 sub-second precision
+              (<a href="https://github.com/apache/beam/pull/38510">#38510</a>).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fig" aria-labelledby="figtool">
+      <div class="fig-cap" id="figtool"><span class="no">FIG. 3</span><span>toolbox</span></div>
+      <div class="spec">
+        <div class="spec-row"><span class="k">languages</span><span class="v">Python · Java · TypeScript · Go · C · C++ · SQL</span></div>
+        <div class="spec-row"><span class="k">data &amp; streaming</span><span class="v">Apache Beam · Flink · Spark · Kafka · Dataflow · PostgreSQL · MySQL · Redis (+ Lua)</span></div>
+        <div class="spec-row"><span class="k">llm / genai</span><span class="v">OpenAI / Gemini / Claude / Doubao APIs · RAG · multi-agent orchestration · Beam RunInference</span></div>
+        <div class="spec-row"><span class="k">frontend</span><span class="v">React · React Native · Expo · Next.js · Tailwind</span></div>
+        <div class="spec-row"><span class="k">backend</span><span class="v">Spring Boot · Node.js · Go · REST / WebSockets · JWT / OAuth2</span></div>
+        <div class="spec-row"><span class="k">infra</span><span class="v">Docker · GCP / AWS / Cloudflare · GitHub Actions · Linux / Nginx · k6 · Playwright</span></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog — Elia Liu</title>
+  <meta name="description" content="Long-form tutorials and build notes from Elia Liu's GSoC 2026 work on Apache Beam: unbounded sources, the Watch transform, and streaming Python.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/">
+  <meta property="og:title" content="Blog — Elia Liu">
+  <meta property="og:description" content="Long-form tutorials and build notes: streaming Python on Apache Beam.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+
+    <header class="pstrip">
+      <h1>Blog</h1>
+      <div class="cell"><b>POSTS</b>2 · long-form tutorials</div>
+      <div class="cell"><b>FEED</b><a href="/feed.xml" style="text-decoration:none">rss ↗</a></div>
+    </header>
+    <p class="page-dek">
+      Long-form tutorials from my Google Summer of Code 2026 work on Apache Beam — written so
+      someone who has never touched a data pipeline can follow along, and someone who has can skip
+      straight to the internals.
+    </p>
+
+    <section class="fig" aria-labelledby="figposts">
+      <div class="fig-cap" id="figposts"><span class="no">FIG. 1</span><span>posts, newest first</span></div>
+      <div class="rows">
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-watch-transform/">Watch: a polling transform for things that grow</a></h3>
+            <p>Porting Beam's Watch transform from Java to Python — polling Splittable DoFns,
+              deduplication by hash, termination conditions, and how to watch a bucket for new files,
+              forever. The second half of the GSoC streaming story.</p>
+            <div class="refs">apache-beam · python · streaming · 30 min · <span class="pr">#39023 merged</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">jul 28 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-unbounded-sources/">Teaching Python pipelines to never stop</a></h3>
+            <p>For a decade, Apache Beam's Python SDK had no way to read an unbounded source. A
+              from-zero tutorial on streaming, Splittable DoFns, and the UnboundedSource API I designed
+              and shipped — validated on four runners.</p>
+            <div class="refs">apache-beam · python · streaming · 35 min · <span class="pr">#38724 merged</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>

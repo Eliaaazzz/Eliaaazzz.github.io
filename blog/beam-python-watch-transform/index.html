@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watch: a polling transform for things that grow — Elia Liu</title>
+  <meta name="description" content="Porting Apache Beam's Watch transform from Java to Python: polling Splittable DoFns, dedup by hash, termination conditions — and how to watch a directory for new files, forever. GSoC 2026, part 2.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/beam-python-watch-transform/">
+  <meta property="og:title" content="Watch: a polling transform for things that grow">
+  <meta property="og:description" content="Porting Beam's Watch transform to Python: polling SDFs, dedup by hash, termination conditions — and watching a bucket for new files, forever.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/beam-python-watch-transform/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta property="article:published_time" content="2026-07-30">
+  <meta property="article:author" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/vendor/highlight.min.js"></script>
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Watch: a polling transform for things that grow",
+    "description": "Porting Beam's Watch transform to Python: polling SDFs, dedup by hash, termination conditions — and watching a bucket for new files, forever.",
+    "datePublished": "2026-07-30",
+    "author": { "@type": "Person", "name": "Elia Liu", "url": "https://eliaaazzz.github.io/" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <article>
+
+      <header class="post-head shell">
+        <p class="crumb"><a href="/blog/">blog</a> / apache beam · gsoc 2026 · part 2 of 2</p>
+        <h1>Watch: a polling transform for things that grow</h1>
+        <p class="dek">
+          "Process every file that lands in this bucket — including the ones that haven't landed yet"
+          sounds like one line of code. It's actually a distributed-systems problem about memory,
+          duplicates, and time. This is the story of porting Beam's <code>Watch</code> transform from
+          Java to Python: how to use it, how a polling Splittable DoFn works inside, and how careful
+          code review made it much better.
+        </p>
+        <div class="post-meta">
+          <time datetime="2026-07-30">July 30, 2026</time><span class="sep">·</span>
+          <span>30 min read</span><span class="sep">·</span>
+          <span>python</span><span class="sep">·</span>
+          <span>streaming</span><span class="sep">·</span>
+          <span>splittable-dofn</span>
+        </div>
+      </header>
+
+      <div class="post-layout shell">
+
+        <details class="toc-mobile">
+          <summary>Contents</summary>
+          <ol>
+            <li><a href="#the-ask">A deceptively simple ask</a></li>
+            <li><a href="#the-idea">The Watch idea</a></li>
+            <li><a href="#meet-the-api">Meet the Python API</a></li>
+            <li><a href="#tutorial">Tutorial: watch a directory</a></li>
+            <li><a href="#semantics">The fine print that matters</a></li>
+            <li><a href="#internals">Inside: a polling SDF</a></li>
+            <li><a href="#exactly-once">The replay trick</a></li>
+            <li><a href="#review">What review fixed</a></li>
+            <li><a href="#bounding-state">Keeping state bounded</a></li>
+            <li><a href="#match-continuously">MatchContinuously, rebuilt</a></li>
+            <li><a href="#links">Links &amp; thanks</a></li>
+          </ol>
+        </details>
+
+        <div class="prose">
+
+          <h2 id="the-ask"><a href="#the-ask">A deceptively simple ask</a></h2>
+
+          <p>Every data team eventually writes this ticket: <em>"Files arrive in a bucket throughout
+          the day. Process each one exactly once, as soon as it appears. Don't stop."</em></p>
+
+          <p>Outside a distributed pipeline you'd reach for a loop: list the directory every
+          thirty seconds, keep a <code>set</code> of filenames you've already handled, process the new
+          ones. Twelve lines, done. Now put that inside a streaming pipeline running on a cluster,
+          and each innocent phrase becomes a hard question:</p>
+
+          <ul>
+            <li><em>"keep a set"</em> — where? The worker that polled last time may be dead. The set
+              must live in <strong>durable, checkpointed state</strong>, and it must not grow without
+              bound over a watch that runs for months.</li>
+            <li><em>"exactly once"</em> — the pipeline retries work when bundles fail. A retry that
+              re-polls will see the same files again. Who filters the <strong>duplicates</strong>?</li>
+            <li><em>"as soon as it appears"</em> — downstream, someone windows by event time. What
+              <strong>watermark</strong> does a directory listing report, and when can a window
+              covering 14:00–14:05 safely fire?</li>
+            <li><em>"don't stop"</em> — but a test, a backfill, or a bounded job <em>must</em> stop.
+              Where does the <strong>termination policy</strong> live?</li>
+          </ul>
+
+          <p>The Java SDK answered all four questions years ago with a single elegant transform:
+          <code>Watch.growthOf(...)</code> — the engine underneath its file-watching utilities. The
+          Python SDK had no equivalent. In <a href="/blog/beam-python-unbounded-sources/">part one</a>
+          I described bringing unbounded sources to Python for GSoC 2026; once that machinery existed,
+          Watch was the natural sequel. It merged as
+          <a href="https://github.com/apache/beam/pull/39023">PR #39023</a>, an experimental transform
+          in <code>apache_beam.io.watch</code>.</p>
+
+          <h2 id="the-idea"><a href="#the-idea">The Watch idea: sets that only grow</a></h2>
+
+          <p>Watch generalizes the ticket beautifully. Forget files for a second. The abstraction is:</p>
+
+          <blockquote><p>For each <strong>input element</strong>, there is a set of
+          <strong>outputs</strong> that only ever <em>grows</em>. You can't subscribe to changes —
+          you can only <strong>poll</strong> the current set. Watch polls it for you, emits each
+          output <em>once</em> the first time it's seen, tracks event time, and stops when a
+          <strong>termination condition</strong> says so.</p></blockquote>
+
+          <p>The input element is a <em>thing to watch</em> — a directory, a table name, a job id. The
+          growing set is <em>what's in it so far</em> — files, partitions, completed shards. This one
+          shape covers a surprising amount of ground: new files under a prefix, new partitions of a
+          Kafka topic, new shards of a completed export, new rows of an append-only audit table.</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 232" role="img" aria-labelledby="dw1-title" style="max-width:640px">
+              <title id="dw1-title">Watch polls a growing set on an interval; each poll emits only the never-seen-before outputs.</title>
+              <text class="d-ink3" x="24" y="26" font-size="11">one input element, polled over time →</text>
+
+              <text class="d-ink3" x="24" y="58" font-size="10.5">poll #1</text>
+              <rect class="d-box" x="88" y="40" width="150" height="28" rx="6"/>
+              <text class="d-ink" x="102" y="58" font-size="11">{ a.csv, b.csv }</text>
+              <rect class="d-box-accent" x="470" y="40" width="146" height="28" rx="6"/>
+              <text class="d-ink" x="484" y="58" font-size="11">emit: a, b</text>
+              <path class="d-line" d="M 238 54 L 466 54" stroke-width="1.5"/>
+              <path class="d-line" d="M 460 48 L 468 54 L 460 60" fill="none" stroke-width="1.5"/>
+
+              <text class="d-ink3" x="24" y="112" font-size="10.5">poll #2</text>
+              <rect class="d-box" x="88" y="94" width="196" height="28" rx="6"/>
+              <text class="d-ink" x="102" y="112" font-size="11">{ a.csv, b.csv, c.csv }</text>
+              <rect class="d-box-accent" x="470" y="94" width="146" height="28" rx="6"/>
+              <text class="d-ink" x="484" y="112" font-size="11">emit: c</text>
+              <path class="d-line" d="M 284 108 L 466 108" stroke-width="1.5"/>
+              <path class="d-line" d="M 460 102 L 468 108 L 460 114" fill="none" stroke-width="1.5"/>
+              <text class="d-ink3" x="300" y="100" font-size="10">a, b already seen — dropped</text>
+
+              <text class="d-ink3" x="24" y="166" font-size="10.5">poll #3</text>
+              <rect class="d-box" x="88" y="148" width="196" height="28" rx="6"/>
+              <text class="d-ink" x="102" y="166" font-size="11">{ a.csv, b.csv, c.csv }</text>
+              <rect class="d-box" x="470" y="148" width="146" height="28" rx="6"/>
+              <text class="d-ink3" x="484" y="166" font-size="11">emit: nothing</text>
+              <path class="d-line" d="M 284 162 L 466 162" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+              <text class="d-ink2" x="24" y="212" font-size="10.5">…then wait poll_interval, poll again — until a termination condition (or PollResult.complete) stops this input.</text>
+            </svg>
+            <figcaption>The growth contract: outputs are emitted exactly once, the first time a poll reports them.</figcaption>
+          </figure>
+
+          <p>Java spells it <code>Watch.growthOf(pollFn)</code>; Python spells it
+          <code>Watch(poll_fn, ...)</code>. Same semantics, same building blocks — a poll function, a
+          poll interval, termination conditions — with Python idioms where they earn their keep.</p>
+
+          <h2 id="meet-the-api"><a href="#meet-the-api">Meet the Python API</a></h2>
+
+          <p>The whole public surface is small enough to hold in your head:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">the API at a glance</span></div>
+            <pre><code class="language-python">from apache_beam.io.watch import (
+    Watch,            # the PTransform
+    PollResult,       # what your poll function returns
+    PollFn,           # optional base class for poll functions
+    never,            # termination: poll until PollResult.complete
+    after_total_of,   # termination: stop N seconds after first seeing an input
+)
+
+watched = inputs | Watch(
+    poll_fn,                       # input -> PollResult
+    poll_interval=5,               # seconds (or a Duration) between polls
+    termination=after_total_of(3600),
+)
+# watched: an unbounded PCollection of (input, output) pairs</code></pre>
+          </div>
+
+          <p>Your poll function receives one input element and returns a <code>PollResult</code> —
+          the current outputs, plus a claim about completeness:</p>
+
+          <ul>
+            <li><code>PollResult.incomplete(outputs)</code> — "here's what exists so far;
+              <em>more may come</em>, keep polling me."</li>
+            <li><code>PollResult.complete(outputs)</code> — "this is everything there will ever be;
+              stop polling this input."</li>
+          </ul>
+
+          <p>Each output can be a plain value or a <code>TimestampedValue</code> carrying its event
+          time — <em>when the thing actually happened</em> (a file's modification time, a row's commit
+          time). Watch preserves that timestamp on the emitted pair and uses it to advance the
+          watermark, so downstream event-time windowing just works.</p>
+
+          <h2 id="tutorial"><a href="#tutorial">Tutorial: watch a directory, process new files forever</a></h2>
+
+          <p>Let's write the ticket from the introduction, for real. Two files, zero magic. As in part
+          one, the poll function lives in its own importable module so remote workers can
+          reconstruct it.</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">watch_landing.py</span></div>
+            <pre><code class="language-python">import glob
+import os
+
+from apache_beam.io.watch import PollResult
+from apache_beam.transforms.window import TimestampedValue
+from apache_beam.utils.timestamp import Timestamp
+
+
+def list_csv_files(directory) -> PollResult[str]:
+  """One poll round: report every .csv currently in `directory`.
+
+  The return annotation `PollResult[str]` is load-bearing: Watch reads
+  it to infer the output coder (here, a UTF-8 string coder). No
+  registration ceremony needed.
+  """
+  outputs = []
+  for path in sorted(glob.glob(os.path.join(directory, '*.csv'))):
+    mtime = Timestamp.of(os.path.getmtime(path))   # event time = mtime
+    outputs.append(TimestampedValue(path, mtime))
+  return PollResult.incomplete(outputs)            # more files may come</code></pre>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">run_watch.py</span></div>
+            <pre><code class="language-python">import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.io.watch import Watch, after_total_of
+
+from watch_landing import list_csv_files
+
+
+def process(path):
+  print(f'processing {path}')
+  return path
+
+
+with beam.Pipeline(options=PipelineOptions(streaming=True)) as p:
+  (p
+   | 'What to watch' >> beam.Create(['./landing'])
+   | 'Watch it'      >> Watch(
+         list_csv_files,
+         poll_interval=5,                  # look every 5 seconds
+         termination=after_total_of(600))  # give up after 10 minutes
+   | 'Just the path' >> beam.MapTuple(lambda directory, path: path)
+   | 'Process once'  >> beam.Map(process))</code></pre>
+          </div>
+
+          <p>Run it, then drop files into <code>./landing</code> from another terminal and watch them
+          get picked up:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">another terminal</span></div>
+            <pre><code class="language-bash">$ echo "1,hello" &gt; landing/a.csv
+# within 5s:            processing ./landing/a.csv
+$ echo "2,world" &gt; landing/b.csv
+$ echo "2,world" &gt; landing/b.csv      # touch it again — no reprocess
+# within 5s:            processing ./landing/b.csv</code></pre>
+          </div>
+
+          <p>Three behaviors to notice, because they're the whole reason Watch exists:</p>
+
+          <ul>
+            <li><strong>Each file is processed once</strong>, even though every poll re-lists every
+              file. The dedup is Watch's job, not your poll function's — <code>list_csv_files</code>
+              is gloriously stateless.</li>
+            <li><strong>Each emission carries the file's mtime as event time</strong>, so you could
+              window downstream by when files actually landed.</li>
+            <li><strong>It stops.</strong> After ten minutes of wall-clock time per watched input,
+              <code>after_total_of(600)</code> ends the polling loop — which is what lets tests and
+              backfills complete. Use <code>never()</code> for a true forever-watch that only
+              <code>PollResult.complete</code> can end.</li>
+          </ul>
+
+          <div class="callout">
+            <span class="callout-label">Scaling the same idea</span>
+            <p>Because the input is a <code>PCollection</code>, watching a thousand directories is
+            <code>beam.Create([dir1, dir2, …])</code> — each input gets its own independent polling
+            loop, its own dedup state, and its own termination clock, spread across the cluster by the
+            runner. That per-element independence is the SDF machinery from part one earning its keep.</p>
+          </div>
+
+          <h2 id="semantics"><a href="#semantics">The fine print that matters</a></h2>
+
+          <p><strong>What counts as "the same output"?</strong> By default, the output value itself is
+          the dedup key. Sometimes that's wrong in interesting ways. Say your poll returns file
+          <em>metadata</em> — path plus size — and a file gets appended to between polls. Same path,
+          new size: by default that's a "new" output. If you want <em>one emission per path,
+          ever</em>, give Watch a key function:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">choosing identity</span></div>
+            <pre><code class="language-python">Watch(
+    poll_file_metadata,
+    poll_interval=5,
+    output_key_fn=lambda meta: meta.path,   # dedup by path only
+)</code></pre>
+          </div>
+
+          <p>And if you want the <em>opposite</em> — re-emit when the same value reappears with a new
+          event time (think: reprocess a file each time its mtime changes) —
+          <code>use_timestamp=True</code> folds the timestamp into the dedup key.</p>
+
+          <p><strong>Keys must encode deterministically.</strong> Watch dedups by hashing the
+          <em>encoded</em> key, so two equal keys must encode to identical bytes on every worker,
+          today and after a restart. Watch converts your key coder to its deterministic form and —
+          this was a review point that made the API stricter and better — <em>refuses</em> coders
+          that have none, at pipeline construction time rather than as silent wrong answers at 3 a.m.
+          (Python's default fallback, pickling, can encode equal dicts differently. You want the
+          loud error.)</p>
+
+          <p><strong>Watermarks.</strong> Your poll function may attach an explicit watermark
+          (<code>PollResult(...).with_watermark(t)</code>, or via <code>incomplete(..., timestamp=)</code>);
+          otherwise Watch infers one from the earliest new output in the round. Either way, event-time
+          windows downstream see honest progress. <code>PollResult.complete</code> is sugar for
+          watermark = end-of-time — which is exactly why it stops the polling: nothing can ever be
+          newer.</p>
+
+          <h2 id="internals"><a href="#internals">Inside: what a polling SDF looks like</a></h2>
+
+          <p>Under the hood, Watch is one Splittable DoFn — <code>_WatchGrowthDoFn</code> — and its
+          restriction is not a byte range but a little state machine called the <em>growth state</em>.
+          For a healthy polling loop it holds three things:</p>
+
+          <ul>
+            <li><strong>the completed set</strong> — a 128-bit BLAKE2 hash of every output key emitted
+              so far, each mapped to the event time it was first seen (hashes, not values: state
+              stays small even when outputs are fat);</li>
+            <li><strong>the poll watermark</strong> — the event-time high ground reached so far;</li>
+            <li><strong>the termination state</strong> — whatever the condition needs to decide
+              "stop now?" (for <code>after_total_of</code>: when this input was first seen).</li>
+          </ul>
+
+          <p>Each SDF invocation is exactly one poll round:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">one poll round (annotated shape of process())</span></div>
+            <pre><code class="language-python">def process(element, tracker, watermark_estimator):
+  result = poll_fn(element)                  # 1. poll — BEFORE claiming,
+                                             #    so a slow poll never blocks
+                                             #    the runner's checkpoints
+  new = never_seen_before(result, completed) # 2. dedup vs hashed history
+  if not tracker.try_claim((new, term_state)):
+    return                                   # 3. runner checkpointed us —
+                                             #    emit nothing this round
+  for out in new.outputs:                    # 4. emit only the new outputs,
+    yield (element, out.value)               #    at their event times
+  advance_watermark(...)                     # 5. explicit or earliest-new
+  if termination.can_stop_polling(...):      # 6. maybe stop…
+    return
+  tracker.defer_remainder(poll_interval)     # 7. …or nap and poll again</code></pre>
+          </div>
+
+          <p>Step 7 is the loop. There is no <code>while True</code> anywhere — the SDF says
+          "checkpoint me, wake me in five seconds," and the <em>runner</em> owns the schedule. That's
+          what makes ten thousand concurrent watches cheap: sleeping watches are just rows of durable
+          state, not parked threads.</p>
+
+          <p>Step 1 hides my favorite small design decision. An early version polled while holding
+          the claim; review pointed out that a slow poll (a listing of a huge bucket, a slow HTTP
+          call) would then block the tracker lock — the very lock the runner needs to take
+          checkpoints. Polling first, claiming after, means the expensive part runs lock-free and the
+          claim is a quick validation.</p>
+
+          <h2 id="exactly-once"><a href="#exactly-once">The replay trick: exactly-once emissions under retry</a></h2>
+
+          <p>Here's the sneaky failure mode. A poll round emits files <code>c</code> and
+          <code>d</code>… and then the bundle fails before the runner commits it. The runner will
+          retry. If the retry polls again, the directory may have changed — <code>e</code> arrived —
+          and now "what did the failed bundle actually promise downstream?" has no clean answer.</p>
+
+          <p>Watch's answer is to make the checkpoint itself deterministic. The growth state has a
+          <em>second</em> variant — a replay state. When the runner checkpoints an in-flight round,
+          the split produces:</p>
+
+          <ul>
+            <li><strong>primary</strong> → a replay state containing <em>exactly the outputs claimed
+              this round</em>. If the bundle retries, it re-emits precisely those — no fresh poll, no
+              drift.</li>
+            <li><strong>residual</strong> → a polling state whose completed set already includes this
+              round's keys, resuming the loop later.</li>
+          </ul>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 214" role="img" aria-labelledby="dw2-title" style="max-width:640px">
+              <title id="dw2-title">A checkpoint splits a claimed poll round into a deterministic replay primary and a polling residual.</title>
+              <rect class="d-box-accent" x="24" y="34" width="266" height="58" rx="8"/>
+              <text class="d-ink" x="42" y="58" font-size="11.5" font-weight="600">claimed round</text>
+              <text class="d-ink2" x="42" y="77" font-size="10.5">new outputs {c, d} + termination state</text>
+
+              <path class="d-line" d="M 290 63 L 348 63" stroke-width="1.5"/>
+              <text class="d-ink3" x="300" y="52" font-size="10.5">split</text>
+
+              <rect class="d-box" x="352" y="10" width="264" height="58" rx="8"/>
+              <text class="d-ink" x="370" y="34" font-size="11.5" font-weight="600">primary → replay {c, d}, then stop</text>
+              <text class="d-ink2" x="370" y="53" font-size="10.5">a retry re-emits exactly c, d — never re-polls</text>
+
+              <rect class="d-box" x="352" y="86" width="264" height="58" rx="8"/>
+              <text class="d-ink" x="370" y="110" font-size="11.5" font-weight="600">residual → keep polling</text>
+              <text class="d-ink2" x="370" y="129" font-size="10.5">completed ∪ {hash(c), hash(d)} · watermark · term</text>
+
+              <text class="d-ink2" x="24" y="176" font-size="10.5">the tracker validates every claim against its state variant: a replay must match its pending outputs</text>
+              <text class="d-ink2" x="24" y="194" font-size="10.5">exactly; a polling claim is rejected if any key was already completed. Retries can't invent new data.</text>
+            </svg>
+            <figcaption>Two restriction variants — polling and replay — make retried bundles deterministic.</figcaption>
+          </figure>
+
+          <p>This is the same primary/residual algebra from
+          <a href="/blog/beam-python-unbounded-sources/">part one</a>, bent to a new shape: the
+          "position" being claimed isn't a byte offset, it's <em>an entire poll round</em>. Once you
+          see restrictions as "any divisible description of work," SDF stops being exotic.</p>
+
+          <h2 id="review"><a href="#review">What code review fixed (a love letter to reviewers)</a></h2>
+
+          <p>The version that merged is meaningfully better than the version I proposed, and the diff
+          between them is a free education. A few of the seven review threads from my mentor:</p>
+
+          <ul>
+            <li><strong>"Why is planning tangled with emission?"</strong> → The round's bookkeeping
+              got refactored into a pure planning function feeding a claim, so the DoFn body reads as
+              the seven-step recipe above rather than interleaved state mutation.</li>
+            <li><strong>"What happens with a non-deterministic key coder?"</strong> → It used to
+              hash whatever bytes came out. Now it raises at construction with a message telling you
+              exactly which coder to fix. Wrong-by-construction beats wrong-at-runtime.</li>
+            <li><strong>"Your output types should fall out of expand()"</strong> → The transform now
+              derives <code>(input, output)</code> type hints from the input's element type and the
+              resolved output coder, so downstream coder inference never silently falls back to
+              pickling.</li>
+            <li><strong>"Docstrings accrete history"</strong> → After three rounds of review edits my
+              docstrings read like changelogs. Rewrote them fresh, each fact stated once. (This one is
+              now a personal rule.)</li>
+          </ul>
+
+          <p>A follow-up PR from the same review energy,
+          <a href="https://github.com/apache/beam/pull/39547">#39547</a> (merged), taught the coder
+          inference to convert <code>typing</code> and native generic hints — so
+          <code>-&gt; PollResult[str]</code> and friends resolve to efficient coders across Python
+          versions.</p>
+
+          <h2 id="bounding-state"><a href="#bounding-state">Keeping state bounded: the timestamp cursor</a></h2>
+
+          <p>One honest cost of the design so far: the completed set grows by one 16-byte hash per
+          output, forever. For a watch that emits millions of outputs over months, "forever" is a
+          budget line. The fix in review
+          (<a href="https://github.com/apache/beam/pull/39090">#39090</a>) is my favorite kind of
+          optimization — an <em>observation</em>, not a mechanism:</p>
+
+          <blockquote><p>If every output your poller reports carries an event time, and you track the
+          high-water mark of times whose outputs are all already emitted, then any future poll result
+          older than that mark <em>must</em> be a duplicate — you can drop it without ever consulting
+          the set. So hashes below the cursor can be evicted from state.</p></blockquote>
+
+          <p>The completed set becomes a <em>recent window</em> plus an O(1) timestamp cursor, instead
+          of an ever-growing archive. On a long-running benchmark the bounded state and cheaper
+          rounds deliver about <strong>4.1× the sustained throughput</strong>. The subtle part —
+          caught in review, of course — is that the cursor must be pure progress metadata: encode
+          <em>items</em> into it and you've just rebuilt the unbounded set with extra steps. It's
+          three fields and an invariant, with tests asserting the state's size stays flat while the
+          watch keeps emitting.</p>
+
+          <h2 id="match-continuously"><a href="#match-continuously">MatchContinuously, rebuilt on Watch</a></h2>
+
+          <p>Remember the original ticket — files in a bucket? Beam's file connector has a transform
+          for exactly that, <code>fileio.MatchContinuously</code>, historically built on a periodic
+          impulse: a timer fires every interval, each firing lists the pattern, and a stateful ParDo
+          drops paths it has seen. It works, but the dedup lives in a side structure with its own
+          lifecycle quirks — and "process each file once <em>across restarts</em>" is precisely the
+          promise Watch makes natively.</p>
+
+          <p>So the capstone of this arc
+          (<a href="https://github.com/apache/beam/pull/39461">#39461</a>, in review) rebuilds
+          <code>MatchContinuously</code> on Watch: the file pattern becomes the watched input, one
+          poll round is one <code>fileio</code> match, and the existing user options map onto Watch's
+          knobs — dedup by path, or by path + modification time for
+          "reprocess files when they change" mode. Users keep the API they know; the semantics
+          underneath become the checkpointed, replay-safe ones you just read about.</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">the user-facing payoff</span></div>
+            <pre><code class="language-python">from apache_beam.io import fileio
+
+files = (p
+  | fileio.MatchContinuously(
+        'gs://my-bucket/landing/*.csv',
+        interval=30,                       # poll every 30s
+        stop_timestamp=end_of_backfill)    # or run forever
+  | fileio.ReadMatches()
+  | beam.Map(process))
+# same transform users already write — Watch semantics underneath</code></pre>
+          </div>
+
+          <h2 id="links"><a href="#links">Links &amp; thanks</a></h2>
+
+          <p>The transform lives in
+          <a href="https://github.com/apache/beam/blob/master/sdks/python/apache_beam/io/watch.py"><code>apache_beam/io/watch.py</code></a>
+          (experimental — the API may still move). The history:
+          <a href="https://github.com/apache/beam/pull/39023">#39023</a> (Watch, merged) ·
+          <a href="https://github.com/apache/beam/pull/39547">#39547</a> (coder inference, merged) ·
+          <a href="https://github.com/apache/beam/pull/39090">#39090</a> (timestamp cursor, in review) ·
+          <a href="https://github.com/apache/beam/pull/39461">#39461</a> (MatchContinuously on Watch, in review).
+          The Java original is
+          <a href="https://github.com/apache/beam/blob/master/sdks/java/core/src/main/java/org/apache/beam/sdk/transforms/Watch.java"><code>Watch.java</code></a> —
+          reading it next to the Python is a nice study in how two SDKs express one idea.</p>
+
+          <p>Thanks again to my mentor <strong>Yi Hu</strong> for review rounds that turned a working
+          transform into a trustworthy one, and to the Beam community for the patience to hold a
+          high bar and the warmth to help you clear it. If you build something on Watch — or find
+          where it creaks — I'd genuinely love to hear about it.</p>
+
+        </div>
+      </div>
+
+      <footer class="post-foot shell">
+        <a class="back" href="/blog/">← All posts</a>
+        <nav class="post-nav" aria-label="More posts">
+          <a href="/blog/beam-python-unbounded-sources/">
+            <span class="dir">Previous · Part 1</span>
+            <span class="t">Teaching Python pipelines to never stop</span>
+          </a>
+        </nav>
+      </footer>
+
+    </article>
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <span>© 2026 Elia Liu</span>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">GitHub</a>
+        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
+        <a href="mailto:elialiulzy@gmail.com">Email</a>
+        <a href="/feed.xml">RSS</a>
+      </nav>
+      <span>drawn by hand — no framework</span>
+    </div>
+  </footer>
+</body>
+</html>
