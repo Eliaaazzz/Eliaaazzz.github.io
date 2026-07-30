@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A local Flink cluster for Beam Python — Elia Liu</title>
+  <meta name="description" content="Run Apache Beam Python pipelines on a real local Flink cluster: setup, a streaming demo, the web UI, checkpoints, and every Windows/WSL2 gotcha I hit. With real screenshots.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/beam-python-local-flink/">
+  <meta property="og:title" content="A local Flink cluster for Beam Python, start to streaming">
+  <meta property="og:description" content="A real runner on your laptop: Flink 1.20 + Beam Python + LOOPBACK, with the web UI, checkpoints, and every gotcha documented.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/beam-python-local-flink/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta property="article:published_time" content="2026-07-30">
+  <meta property="article:author" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ea">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171a12">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/vendor/highlight.min.js"></script>
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "A local Flink cluster for Beam Python, start to streaming",
+    "description": "A real runner on your laptop: Flink 1.20 + Beam Python + LOOPBACK, with the web UI, checkpoints, and every gotcha documented.",
+    "datePublished": "2026-07-30",
+    "author": { "@type": "Person", "name": "Elia Liu", "url": "https://eliaaazzz.github.io/" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/">home</a>
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <article>
+
+      <header class="post-head shell">
+        <p class="crumb"><a href="/blog/">blog</a> / runner field notes · part 1</p>
+        <h1>A local Flink cluster for Beam Python, start to streaming</h1>
+        <p class="dek">
+          DirectRunner is a simulator: it ignores resume delays, fakes the clock, and forgives
+          sins a real runner won't. The day your streaming pipeline matters, you want a real
+          engine on your laptop. This is my complete local-Flink setup for Apache Beam Python —
+          the exact commands, a live streaming job, the web UI to prove it, and every gotcha
+          I hit so you don't have to. Every screenshot below is a raw capture from this run.
+        </p>
+        <div class="post-meta">
+          <time datetime="2026-07-30">July 30, 2026</time><span class="sep">·</span>
+          <span>15 min read</span><span class="sep">·</span>
+          <span>apache-beam</span><span class="sep">·</span>
+          <span>flink</span><span class="sep">·</span>
+          <span>hands-on</span>
+        </div>
+      </header>
+
+      <div class="post-layout shell">
+
+        <details class="toc-mobile">
+          <summary>Contents</summary>
+          <ol>
+            <li><a href="#why">Why a real runner, locally</a></li>
+            <li><a href="#setup">Step 1 — get Flink running</a></li>
+            <li><a href="#pipeline">Step 2 — a streaming pipeline</a></li>
+            <li><a href="#submit">Step 3 — submit and watch it live</a></li>
+            <li><a href="#checkpoints">Step 4 — checkpoints, for real</a></li>
+            <li><a href="#gotchas">The gotcha list (Windows/WSL2 included)</a></li>
+            <li><a href="#next">Where to go next</a></li>
+          </ol>
+        </details>
+
+        <div class="prose">
+
+          <h2 id="why"><a href="#why">Why a real runner, locally</a></h2>
+
+          <p>Everything in my <a href="/blog/beam-python-unbounded-sources/">unbounded sources</a>
+          and <a href="/blog/beam-python-watch-transform/">Watch</a> posts — watermarks, checkpoints,
+          <code>defer_remainder</code> — only <em>means</em> something on a runner that takes time
+          seriously. The local FnApiRunner does not: it ignores SDF resume delays (idle sources
+          busy-loop), and its notion of "streaming" is a polite fiction. Flink is the easiest real
+          streaming engine to run on one machine, and it's the same engine Beam's own
+          ValidatesRunner CI uses — when I validated my GSoC work, this exact setup ran
+          174 tests / 0 failures.</p>
+
+          <p>What you need: <strong>Java 11+</strong>, <strong>Python 3.9–3.12 with
+          <code>apache-beam</code></strong>, and a Linux-ish environment — macOS or Linux natively;
+          on Windows, use <strong>WSL2</strong> and do <em>everything inside it</em> (the
+          <a href="#gotchas">gotcha list</a> explains why that isn't optional).</p>
+
+          <h2 id="setup"><a href="#setup">Step 1 — get Flink running (two commands)</a></h2>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">shell (WSL2 / Linux / macOS)</span></div>
+            <pre><code class="language-bash"># 1. Download + unpack Flink (1.20.x is what current Beam targets)
+curl -LO https://archive.apache.org/dist/flink/flink-1.20.1/flink-1.20.1-bin-scala_2.12.tgz
+tar xzf flink-1.20.1-bin-scala_2.12.tgz
+
+# 2. Start the standalone cluster: one JobManager + one TaskManager
+./flink-1.20.1/bin/start-cluster.sh
+
+# Sanity check — the REST API answers on :8081
+curl -s http://localhost:8081/overview</code></pre>
+          </div>
+
+          <p>That last command should return JSON like
+          <code>{"taskmanagers":1,"slots-total":4,…,"flink-version":"1.20.1"}</code>, and
+          <strong>http://localhost:8081</strong> now serves the Flink Web UI (WSL2 forwards
+          localhost to Windows automatically):</p>
+
+          <figure>
+            <img class="shot" src="/assets/img/posts/flink-dashboard.png" width="1568" height="765"
+                 loading="lazy" alt="Flink 1.20.1 web dashboard showing one task manager, four slots, and the Beam job ticks-every-second in RUNNING state">
+            <figcaption>Raw capture: the dashboard of the cluster this post boots — 1 TaskManager,
+              4 slots, and our Beam job already RUNNING.</figcaption>
+          </figure>
+
+          <p>Out of the box you get 4 task slots (<code>conf/config.yaml</code> →
+          <code>taskmanager.numberOfTaskSlots</code>) — plenty for local work. Stop everything later
+          with <code>bin/stop-cluster.sh</code>.</p>
+
+          <h2 id="pipeline"><a href="#pipeline">Step 2 — a genuinely streaming pipeline</a></h2>
+
+          <p>A tick every second, counted in 10-second event-time windows, forever. Small enough to
+          read in one breath, streaming enough to exercise watermarks and checkpoints:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">blog_stream_demo.py</span></div>
+            <pre><code class="language-python">import logging
+
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.transforms.periodicsequence import PeriodicImpulse
+from apache_beam.transforms.window import FixedWindows
+
+_LOGGER = logging.getLogger("blog_stream_demo")
+
+
+def log_count(kv):
+  window_key, n = kv
+  _LOGGER.warning("window closed: %s ticks=%d", window_key, n)
+  return kv
+
+
+def run():
+  options = PipelineOptions([
+      "--runner=FlinkRunner",
+      "--flink_master=localhost:8081",
+      "--flink_version=1.20",
+      "--environment_type=LOOPBACK",
+      "--streaming",
+      "--job_name=ticks-every-second",
+      "--parallelism=1",
+  ])
+  # Ask Flink to checkpoint every 10s so the Checkpoints tab has a story.
+  # (If your SDK version rejects a --checkpointing_interval flag, this
+  # options escape hatch always works.)
+  options._all_options["checkpointing_interval"] = 10000
+
+  with beam.Pipeline(options=options) as p:
+    _ = (
+        p
+        | "TickEverySecond" >> PeriodicImpulse(fire_interval=1.0)
+        | "Window10s" >> beam.WindowInto(FixedWindows(10))
+        | "One" >> beam.Map(lambda _: ("ticks", 1))
+        | "CountPerWindow" >> beam.CombinePerKey(sum)
+        | "Log" >> beam.Map(log_count))
+
+
+if __name__ == "__main__":
+  logging.basicConfig(level=logging.INFO)
+  run()</code></pre>
+          </div>
+
+          <p>Two options carry all the weight:</p>
+
+          <ul>
+            <li><strong><code>--flink_master=localhost:8081</code></strong> — submit to the real
+              cluster. (Omit it and Beam spins up a throwaway mini-cluster instead: convenient,
+              but then there's no UI to look at.)</li>
+            <li><strong><code>--environment_type=LOOPBACK</code></strong> — the worker harness runs
+              <em>inside your Python process</em>, so no Docker images, instant logs in your
+              terminal, and your local files are just there. Perfect for development; for
+              production you'd let workers run in containers instead.</li>
+          </ul>
+
+          <h2 id="submit"><a href="#submit">Step 3 — submit, then watch it actually run</a></h2>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">shell</span></div>
+            <pre><code class="language-bash">python blog_stream_demo.py
+# first run: Beam downloads beam-runners-flink-1.20-job-server-*.jar
+# into ~/.apache_beam/cache/jars — one-time, ~250 MB
+# then: INFO ... Job state changed to RUNNING
+#       WARNING blog_stream_demo window closed: ('ticks', 10) ...</code></pre>
+          </div>
+
+          <p>The process stays in the foreground — that's correct, your terminal <em>is</em> a
+          LOOPBACK worker now. Open the job in the UI and you can watch the pipeline as Flink sees
+          it:</p>
+
+          <figure>
+            <img class="shot" src="/assets/img/posts/flink-job-graph.png" width="1568" height="765"
+                 loading="lazy" alt="Flink job page for ticks-every-second: a three-vertex streaming DAG with all vertices RUNNING, records flowing and low watermarks advancing">
+            <figcaption>Raw capture: the running job. Beam fused our five transforms into three
+              Flink vertices; records are flowing and the low watermark is advancing.</figcaption>
+          </figure>
+
+          <p>Worth a minute of staring: Beam's runner translation <em>fused</em> the five Python
+          transforms into three Flink vertices — <code>Source: Impulse → TickEverySecond</code>,
+          the windowing map, and <code>CountPerWindow/GroupByKey → Log</code> — connected by HASH
+          exchanges. The "Low Watermark" column is the event-time frontier from
+          <a href="/blog/beam-python-unbounded-sources/">part one of the streaming story</a>,
+          live on a dashboard.</p>
+
+          <h2 id="checkpoints"><a href="#checkpoints">Step 4 — checkpoints, for real this time</a></h2>
+
+          <p>Because we set a checkpoint interval, Flink snapshots the whole pipeline every ten
+          seconds — including the windowed sums buffered inside <code>CombinePerKey</code>:</p>
+
+          <figure>
+            <img class="shot" src="/assets/img/posts/flink-checkpoints.png" width="1568" height="765"
+                 loading="lazy" alt="Flink checkpoints tab: 11 triggered, 10 completed, per-operator checkpointed state sizes with the windowing operator holding 185 KB">
+            <figcaption>Raw capture: the Checkpoints tab. Ten completed checkpoints; the window
+              operator alone carries ~185 KB of live state.</figcaption>
+          </figure>
+
+          <p>That table is the difference between a simulator and a runner. Kill the TaskManager
+          mid-run and Flink restores from the latest checkpoint — the same machinery that makes an
+          SDF's <em>residual</em> durable when a source calls <code>defer_remainder</code>. When I
+          soak-tested unbounded SDFs on exactly this setup, that machinery is where I found (and
+          <a href="https://github.com/apache/beam/pull/39191">fixed, #39191</a>) a state leak: every
+          self-checkpoint registered a fresh Flink state entry and never cleaned it up, which OOMed
+          long-running streams.</p>
+
+          <h2 id="gotchas"><a href="#gotchas">The gotcha list</a></h2>
+
+          <p>Everything here cost me an evening once. Windows-specific ones first:</p>
+
+          <ul>
+            <li><strong>Run the client inside WSL2, not native Windows.</strong> On native Windows,
+              the auto-started job server trips over drive-letter paths (the colon in
+              <code>C:\…</code> reads as a separator), and the gradle/tox harness around Beam's own
+              test suites hardcodes POSIX <code>sh</code>. Everything in this post — Python included
+              — runs inside WSL2.</li>
+            <li><strong>Keep the session that started Flink alive.</strong> Daemons launched from a
+              WSL shell can die with it (SIGHUP) — if <code>:8081</code> mysteriously refuses
+              connections a minute later, that's what happened. Start the cluster from a shell you
+              keep open, or wrap it in <code>setsid</code>/tmux.</li>
+            <li><strong>Let <code>java.exe</code> through the firewall</strong> the first time
+              Windows asks, or the job submission waits until it times out.</li>
+            <li><strong>Don't mix Docker Desktop with LOOPBACK.</strong> With
+              <code>environment_type=DOCKER</code> the worker container's
+              <code>localhost</code> is not your machine, and the artifact channel breaks in
+              confusing ways. LOOPBACK sidesteps all of it locally.</li>
+            <li><strong>Long soaks with <code>PeriodicImpulse</code>:</strong> on SDKs before the
+              <a href="https://github.com/apache/beam/pull/39191">#39191</a> fix, self-checkpointing
+              SDFs leak runner state on Flink — fine for demos, visible after hours. Upgrade, or
+              keep soaks short.</li>
+            <li><strong><code>--flink_version</code> must match the cluster</strong> (here
+              <code>1.20</code>), because it selects which job-server jar Beam downloads.</li>
+          </ul>
+
+          <h2 id="next"><a href="#next">Where to go next</a></h2>
+
+          <p>You now have a laptop-sized version of the environment Beam's CI uses. Point the same
+          pipeline at a custom <a href="/blog/beam-python-unbounded-sources/">unbounded source</a>
+          or a <a href="/blog/beam-python-watch-transform/">Watch</a> loop and the UI will show you
+          watermarks and checkpoints doing exactly what those posts promise. And when you wonder
+          whether the other big open-source engine can do this too —
+          <a href="/blog/beam-python-spark-runner/">part 2: the Spark runner, and where streaming
+          stops</a>.</p>
+
+        </div>
+      </div>
+
+      <footer class="post-foot shell">
+        <a class="back" href="/blog/">← All posts</a>
+        <nav class="post-nav" aria-label="More posts">
+          <a href="/blog/beam-python-watch-transform/">
+            <span class="dir">Previously</span>
+            <span class="t">Watch: a polling transform for things that grow</span>
+          </a>
+          <a class="next" href="/blog/beam-python-spark-runner/">
+            <span class="dir">Next · Field notes 2</span>
+            <span class="t">Beam Python on the Spark runner</span>
+          </a>
+        </nav>
+      </footer>
+
+    </article>
+  </main>
+
+  <footer class="foot">
+    <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="shell">
+      <p class="foot-big">Let's build something that runs <span class="gs">forever</span>.</p>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">github</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+        <a href="/feed.xml">rss</a>
+        <a href="/blog/">blog</a>
+      </nav>
+      <div class="foot-fine">
+        <span>© 2026 elia (zhenyu) liu</span>
+        <span>drawn by hand — no framework</span>
+        <span>melbourne, au</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

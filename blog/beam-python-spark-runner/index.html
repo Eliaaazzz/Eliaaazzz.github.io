@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beam Python on the Spark runner — Elia Liu</title>
+  <meta name="description" content="Run Apache Beam Python on a real local Spark cluster through the portable job server: setup, a working job with real screenshots, how the translation looks in the Spark UI — and exactly where streaming stops (issue #19468).">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/beam-python-spark-runner/">
+  <meta property="og:title" content="Beam Python on the Spark runner — and where streaming stops">
+  <meta property="og:description" content="The portable Spark loop end to end: job server, standalone cluster, real UI screenshots, and the unbounded-SDF gap I'm working to close (#39331).">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/beam-python-spark-runner/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta property="article:published_time" content="2026-07-30">
+  <meta property="article:author" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ea">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171a12">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/vendor/highlight.min.js"></script>
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Beam Python on the Spark runner — and where streaming stops",
+    "description": "The portable Spark loop end to end: job server, standalone cluster, real UI screenshots, and the unbounded-SDF gap I'm working to close.",
+    "datePublished": "2026-07-30",
+    "author": { "@type": "Person", "name": "Elia Liu", "url": "https://eliaaazzz.github.io/" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/">home</a>
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <article>
+
+      <header class="post-head shell">
+        <p class="crumb"><a href="/blog/">blog</a> / runner field notes · part 2</p>
+        <h1>Beam Python on the Spark runner — and where streaming stops</h1>
+        <p class="dek">
+          Same Beam pipeline, different engine: this time Apache Spark, through Beam's portability
+          layer. We'll stand up a real standalone cluster, run a Python pipeline through the
+          portable job server, read the evidence in the Spark UI — and then be honest about the
+          one thing this runner can't do yet, because closing that gap is literally my open PR.
+          All screenshots are raw captures from this run.
+        </p>
+        <div class="post-meta">
+          <time datetime="2026-07-30">July 30, 2026</time><span class="sep">·</span>
+          <span>14 min read</span><span class="sep">·</span>
+          <span>apache-beam</span><span class="sep">·</span>
+          <span>spark</span><span class="sep">·</span>
+          <span>hands-on</span>
+        </div>
+      </header>
+
+      <div class="post-layout shell">
+
+        <details class="toc-mobile">
+          <summary>Contents</summary>
+          <ol>
+            <li><a href="#loop">The portable loop, in one picture</a></li>
+            <li><a href="#jobserver">Step 1 — the job server</a></li>
+            <li><a href="#cluster">Step 2 — a real Spark cluster</a></li>
+            <li><a href="#pipeline">Step 3 — run a pipeline</a></li>
+            <li><a href="#ui">Step 4 — read the Spark UI</a></li>
+            <li><a href="#streaming">Where streaming stops (#19468)</a></li>
+            <li><a href="#gotchas">Gotchas</a></li>
+          </ol>
+        </details>
+
+        <div class="prose">
+
+          <h2 id="loop"><a href="#loop">The portable loop, in one picture</a></h2>
+
+          <p>Unlike Flink — where the Beam client talks to the cluster almost directly — the Spark
+          runner goes through Beam's portability front door: a small Java process called the
+          <strong>job server</strong> that accepts your pipeline as a language-neutral proto,
+          translates it into Spark's RDD API, and submits the result as a Spark application.</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 640 150" role="img" aria-labelledby="ds1-title" style="max-width:640px">
+              <title id="ds1-title">Python client submits to the Beam job server on port 8099, which drives a Spark master on port 7077 and its worker; the worker calls back into the client's LOOPBACK harness.</title>
+              <rect class="d-box" x="10" y="46" width="128" height="52" rx="6"/>
+              <text class="d-ink" x="26" y="68" font-size="11" font-weight="600">Python client</text>
+              <text class="d-ink2" x="26" y="86" font-size="10">pipeline proto</text>
+              <path class="d-line" d="M 138 72 L 186 72" stroke-width="1.5"/>
+              <text class="d-ink3" x="142" y="62" font-size="9.5">:8099</text>
+              <rect class="d-box-accent" x="188" y="46" width="140" height="52" rx="6"/>
+              <text class="d-ink" x="204" y="68" font-size="11" font-weight="600">Beam job server</text>
+              <text class="d-ink2" x="204" y="86" font-size="10">proto → RDDs</text>
+              <path class="d-line" d="M 328 72 L 376 72" stroke-width="1.5"/>
+              <text class="d-ink3" x="332" y="62" font-size="9.5">:7077</text>
+              <rect class="d-box" x="378" y="46" width="120" height="52" rx="6"/>
+              <text class="d-ink" x="394" y="68" font-size="11" font-weight="600">Spark master</text>
+              <text class="d-ink2" x="394" y="86" font-size="10">UI :8080</text>
+              <path class="d-line" d="M 498 72 L 540 72" stroke-width="1.5"/>
+              <rect class="d-box" x="542" y="46" width="88" height="52" rx="6"/>
+              <text class="d-ink" x="556" y="68" font-size="11" font-weight="600">worker</text>
+              <text class="d-ink2" x="556" y="86" font-size="10">executors</text>
+              <path class="d-accent-stroke" d="M 586 98 C 586 132, 90 138, 74 100" fill="none" stroke-width="1.5" stroke-dasharray="5 4"/>
+              <text class="d-ink3" x="238" y="136" font-size="9.5">Python UDFs run in the client's LOOPBACK harness</text>
+            </svg>
+            <figcaption>The portable Spark loop: client → job server (:8099) → master (:7077) →
+              executors, with Python code executing back in the LOOPBACK harness.</figcaption>
+          </figure>
+
+          <p>The lovely consequence: your pipeline file doesn't mention Spark <em>anywhere</em>
+          except the endpoint option. The uncomfortable consequence lives at the
+          <a href="#streaming">end of this post</a>.</p>
+
+          <h2 id="jobserver"><a href="#jobserver">Step 1 — the job server</a></h2>
+
+          <p>Two ways to get one, both fine:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">option A — docker (easiest)</span></div>
+            <pre><code class="language-bash">docker run --net=host apache/beam_spark3_job_server:latest \
+  --spark-master-url=spark://localhost:7077</code></pre>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">option B — the jar (what I run; no Docker in WSL2)</span></div>
+            <pre><code class="language-bash"># build once from a Beam checkout…
+./gradlew :runners:spark:3:job-server:shadowJar
+# …then run it against your cluster (or local[4] for embedded Spark)
+java -jar beam-runners-spark-3-job-server-*.jar \
+  --job-port 8099 --artifact-port 8098 --expansion-port 8097 \
+  --spark-master-url spark://localhost:7077</code></pre>
+          </div>
+
+          <p>When it's up, port <code>8099</code> is listening and every Beam pipeline with
+          <code>--job_endpoint=localhost:8099</code> lands here. With
+          <code>--spark-master-url local[4]</code> you don't even need a cluster — the job server
+          embeds one. But we came for the real thing:</p>
+
+          <h2 id="cluster"><a href="#cluster">Step 2 — a real (tiny) Spark cluster</a></h2>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">shell (WSL2 / Linux / macOS)</span></div>
+            <pre><code class="language-bash">curl -LO https://archive.apache.org/dist/spark/spark-3.5.0/spark-3.5.0-bin-hadoop3.tgz
+tar xzf spark-3.5.0-bin-hadoop3.tgz && cd spark-3.5.0-bin-hadoop3
+
+./sbin/start-master.sh --host localhost --port 7077 --webui-port 8080
+./sbin/start-worker.sh  spark://localhost:7077 --cores 2 --memory 2g</code></pre>
+          </div>
+
+          <p>Master UI on <strong>http://localhost:8080</strong>, one registered worker. Here it is
+          mid-run, with our Beam application alive on it:</p>
+
+          <figure>
+            <img class="shot" src="/assets/img/posts/spark-master.png" width="1568" height="760"
+                 loading="lazy" alt="Spark 3.5.0 master UI at spark://localhost:7077 with one alive worker and the Beam application word-lengths-on-spark in RUNNING state">
+            <figcaption>Raw capture: Spark master at <code>spark://localhost:7077</code> — one ALIVE
+              worker (2 cores in use), and <code>word-lengths-on-spark</code> RUNNING.</figcaption>
+          </figure>
+
+          <h2 id="pipeline"><a href="#pipeline">Step 3 — run a pipeline</a></h2>
+
+          <p>Note what's <em>absent</em> below: any mention of Spark beyond the endpoint. This is
+          the same shape of file as the Flink post's demo — that's the whole point of Beam.</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">blog_spark_demo.py</span></div>
+            <pre><code class="language-python">import logging
+import time
+
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+
+WORDS = [
+    "streaming", "pipelines", "should", "not", "care", "which", "engine",
+    "runs", "them", "beam", "spark", "portable", "runner", "loopback",
+]
+
+
+def slow_pair(word):
+  time.sleep(0.05)  # keep the stage on the UI long enough to look at
+  return (word, len(word))
+
+
+def log_pair(kv):
+  logging.warning("word=%s len=%d", *kv)
+  return kv
+
+
+def run():
+  options = PipelineOptions([
+      "--runner=PortableRunner",
+      "--job_endpoint=localhost:8099",
+      "--environment_type=LOOPBACK",
+      "--job_name=word-lengths-on-spark",
+  ])
+  with beam.Pipeline(options=options) as p:
+    _ = (
+        p
+        | "Words" >> beam.Create(WORDS * 150)
+        | "Pair" >> beam.Map(slow_pair)
+        | "MaxLen" >> beam.CombinePerKey(max)
+        | "Log" >> beam.Map(log_pair))
+
+
+if __name__ == "__main__":
+  logging.basicConfig(level=logging.INFO)
+  run()</code></pre>
+          </div>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">output (real run)</span></div>
+            <pre><code class="language-text">INFO:apache_beam.runners.portability.portable_runner:Job state changed to RUNNING
+WARNING:root:word=care len=4
+WARNING:root:word=loopback len=8
+WARNING:root:word=engine len=6
+WARNING:root:word=portable len=8
+...                       # 14 distinct words, aggregated by CombinePerKey
+INFO:apache_beam.runners.portability.portable_runner:Job state changed to DONE</code></pre>
+          </div>
+
+          <h2 id="ui"><a href="#ui">Step 4 — read the Spark UI like a translation</a></h2>
+
+          <p>While the job runs, the driver serves the standard application UI on
+          <strong>http://localhost:4040</strong> — and its Stages tab is a little Rosetta stone.
+          You wrote <code>Create | Map | CombinePerKey</code>; Spark is executing
+          <code>repartition</code>, <code>mapPartitionsToPair</code>, and <code>foreach</code>
+          stages generated by Beam's translators:</p>
+
+          <figure>
+            <img class="shot" src="/assets/img/posts/spark-stages.png" width="1568" height="760"
+                 loading="lazy" alt="Spark UI stages page for the Beam job: an active mapPartitionsToPair stage from GroupNonMergingWindowsFunctions, a completed repartition stage from GroupCombineFunctions, and a pending foreach stage from BoundedDataset">
+            <figcaption>Raw capture: Beam's Spark translation at work —
+              <code>GroupCombineFunctions.java</code>, <code>GroupNonMergingWindowsFunctions.java</code>,
+              <code>BoundedDataset.java</code> are the runner's own translation classes. (The
+              <code>1 failed</code> task attempt was retried and succeeded — clusters being
+              clusters.)</figcaption>
+          </figure>
+
+          <p>Those java file names in the stage descriptions are exactly where the portable Spark
+          runner lives in the Beam codebase — the same files my current PR touches.</p>
+
+          <h2 id="streaming"><a href="#streaming">Where streaming stops — and why that's my problem now</a></h2>
+
+          <p>Try the Flink post's <code>PeriodicImpulse</code> demo against this job server and
+          you'll hit the wall that's been open since 2019 as
+          <a href="https://github.com/apache/beam/issues/19468">issue #19468</a>: the portable Spark
+          runner cannot run <strong>unbounded Splittable DoFns</strong>. Beam's own test suite
+          name-skips every <code>test_sdf*</code> case on Spark.</p>
+
+          <p>The missing piece is precise: when an unbounded SDF pauses itself with
+          <code>defer_remainder</code>, the runner must catch the returned <em>residual</em>,
+          store it durably, and re-schedule it — and honor bundle finalization on commit. Flink
+          implements that hand-off; the portable Spark runner historically dropped it, so an
+          unbounded source either never yields or loses its place. That's the exact machinery my
+          streaming work depends on, so closing it became my job:</p>
+
+          <ul>
+            <li><a href="https://github.com/apache/beam/pull/39331"><strong>#39331</strong> — SDF
+              self-checkpointing and bundle finalization for the portable Spark runner</a>
+              (in review): catch the residual in-call, resume it, and fire finalization
+              callbacks — the same contract the
+              <a href="/blog/beam-python-unbounded-sources/">UnboundedSource wrapper</a> relies on.</li>
+            <li>On top of it I've validated locally a cross-batch residual relay with watermark
+              feeding — unbounded SDF output flowing across Spark micro-batches with event-time
+              windows firing exactly. Streaming Spark for Python is a longer road, but it's
+              walkable.</li>
+          </ul>
+
+          <p>Until then, the honest guidance: <strong>Spark runner for batch Beam Python — works
+          well, as you just saw. For streaming, use Flink or Dataflow.</strong></p>
+
+          <h2 id="gotchas"><a href="#gotchas">Gotchas</a></h2>
+
+          <ul>
+            <li><strong>Keep the client process alive.</strong> With LOOPBACK, your Python process
+              hosts the workers' harness — Ctrl-C'ing the client kills the job's UDF execution.</li>
+            <li><strong>WSL2: copy big jars onto ext4.</strong> Class-loading a ~300 MB shadow jar
+              through the <code>/mnt/c</code> 9p filesystem is painfully slow; <code>cp</code> it to
+              <code>~</code> first.</li>
+            <li><strong>The job server is quiet by design</strong> — the shadow jar ships no logging
+              backend, so don't wait for a "ready" banner; probe port <code>8099</code>.</li>
+            <li><strong>One job server, one cluster mode.</strong> Restart it to switch between
+              <code>local[4]</code> and <code>spark://…</code> — it binds its master URL at
+              startup.</li>
+            <li><strong>4040 only exists while a driver runs.</strong> If you want to inspect a
+              finished job, check the master UI's Completed Applications instead.</li>
+          </ul>
+
+        </div>
+      </div>
+
+      <footer class="post-foot shell">
+        <a class="back" href="/blog/">← All posts</a>
+        <nav class="post-nav" aria-label="More posts">
+          <a href="/blog/beam-python-local-flink/">
+            <span class="dir">Previous · Field notes 1</span>
+            <span class="t">A local Flink cluster for Beam Python</span>
+          </a>
+          <a class="next" href="/blog/beam-python-unbounded-sources/">
+            <span class="dir">The streaming story</span>
+            <span class="t">Teaching Python pipelines to never stop</span>
+          </a>
+        </nav>
+      </footer>
+
+    </article>
+  </main>
+
+  <footer class="foot">
+    <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="shell">
+      <p class="foot-big">Let's build something that runs <span class="gs">forever</span>.</p>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">github</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+        <a href="/feed.xml">rss</a>
+        <a href="/blog/">blog</a>
+      </nav>
+      <div class="foot-fine">
+        <span>© 2026 elia (zhenyu) liu</span>
+        <span>drawn by hand — no framework</span>
+        <span>melbourne, au</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

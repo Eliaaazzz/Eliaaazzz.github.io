@@ -7,6 +7,20 @@
     <language>en</language>
     <atom:link href="https://eliaaazzz.github.io/feed.xml" rel="self" type="application/rss+xml"/>
     <item>
+      <title>Beam Python on the Spark runner — and where streaming stops</title>
+      <link>https://eliaaazzz.github.io/blog/beam-python-spark-runner/</link>
+      <guid>https://eliaaazzz.github.io/blog/beam-python-spark-runner/</guid>
+      <pubDate>Thu, 30 Jul 2026 06:00:00 GMT</pubDate>
+      <description>Run Apache Beam Python on a real local Spark cluster through the portable job server — setup, a working job with raw UI screenshots, and exactly where streaming stops (issue #19468, PR #39331).</description>
+    </item>
+    <item>
+      <title>A local Flink cluster for Beam Python, start to streaming</title>
+      <link>https://eliaaazzz.github.io/blog/beam-python-local-flink/</link>
+      <guid>https://eliaaazzz.github.io/blog/beam-python-local-flink/</guid>
+      <pubDate>Thu, 30 Jul 2026 05:00:00 GMT</pubDate>
+      <description>A real streaming runner on your laptop: Flink 1.20 + Beam Python + LOOPBACK, with the web UI, checkpoints with real state sizes, and every Windows/WSL2 gotcha documented.</description>
+    </item>
+    <item>
       <title>Watch: a polling transform for things that grow</title>
       <link>https://eliaaazzz.github.io/blog/beam-python-watch-transform/</link>
       <guid>https://eliaaazzz.github.io/blog/beam-python-watch-transform/</guid>

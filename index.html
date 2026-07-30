@@ -138,6 +138,17 @@
         <div class="row">
           <span class="when">jul 30 2026</span>
           <div>
+            <h3><a href="/blog/beam-python-local-flink/">Runner field notes: a local Flink cluster, then the Spark runner</a></h3>
+            <p>Two hands-on guides with raw screenshots from live runs — a real streaming job on
+              Flink 1.20 (checkpoints included), and the portable Spark loop end to end, plus the
+              unbounded-SDF gap I'm closing in <a href="https://github.com/apache/beam/pull/39331">#39331</a>.
+              Also: <a href="/blog/beam-python-spark-runner/">part 2, Spark</a>.</p>
+            <div class="refs">apache-beam · flink · spark · 15 + 14 min</div>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div>
             <h3><a href="/blog/beam-python-watch-transform/">Watch: a polling transform for things that grow</a></h3>
             <p>Polling SDFs, dedup by hash, termination conditions — and watching a bucket for new
               files, forever. Part 2 of the GSoC streaming story.</p>
@@ -244,5 +255,19 @@
       </div>
     </div>
   </footer>
+
+  <div class="voicemsg" id="voicemsg" hidden>
+    <img class="vm-ava" src="/assets/img/elia-avatar.jpg" alt="" width="92" height="92">
+    <button class="vm-bubble" id="vmPlay" type="button" aria-label="Play a voice message from Elia">
+      <span class="vm-close" id="vmClose" role="button" aria-label="Dismiss voice message">×</span>
+      <span class="vm-from">elia sent a voice message</span>
+      <span class="vm-row">
+        <span class="vm-icon" id="vmIcon" aria-hidden="true">▶</span>
+        <span class="vm-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="vm-time" id="vmTime">0:00</span>
+      </span>
+    </button>
+    <audio id="vmAudio" src="/assets/audio/hello.m4a" preload="metadata"></audio>
+  </div>
 </body>
 </html>

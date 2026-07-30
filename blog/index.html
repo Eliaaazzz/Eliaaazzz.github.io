@@ -30,6 +30,7 @@
     <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
     <div class="topbar-right">
       <nav class="crumbs" aria-label="Site">
+        <a href="/">home</a>
         <a href="/blog/" aria-current="page">blog</a>
         <a href="/sde/">sde</a>
         <a href="/research/">research</a>
@@ -45,7 +46,7 @@
 
     <header class="pstrip">
       <h1>Blog</h1>
-      <div class="cell"><b>POSTS</b>2 · long-form tutorials</div>
+      <div class="cell"><b>POSTS</b>4 · long-form tutorials</div>
       <div class="cell"><b>FEED</b><a href="/feed.xml" style="text-decoration:none">rss ↗</a></div>
     </header>
     <p class="page-dek">
@@ -57,6 +58,26 @@
     <section class="fig" aria-labelledby="figposts">
       <div class="fig-cap" id="figposts"><span class="no">FIG. 1</span><span>posts, newest first</span></div>
       <div class="rows">
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-spark-runner/">Beam Python on the Spark runner — and where streaming stops</a></h3>
+            <p>The portable loop end to end: job server, a real standalone cluster, the translation
+              visible in the Spark UI — and the unbounded-SDF gap I'm working to close. With raw
+              screenshots from a live run.</p>
+            <div class="refs">apache-beam · spark · hands-on · 14 min · <span class="pr">#39331 in review</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <span class="when">jul 30 2026</span>
+          <div>
+            <h3><a href="/blog/beam-python-local-flink/">A local Flink cluster for Beam Python, start to streaming</a></h3>
+            <p>A real runner on your laptop: Flink 1.20 + LOOPBACK, a live streaming job in the web
+              UI, checkpoints with actual state sizes, and every Windows/WSL2 gotcha documented.
+              With raw screenshots from a live run.</p>
+            <div class="refs">apache-beam · flink · hands-on · 15 min · <span class="pr">#39191 merged</span></div>
+          </div>
+        </div>
         <div class="row">
           <span class="when">jul 30 2026</span>
           <div>

@@ -44,6 +44,16 @@
       el.classList.add("rv");
       io.observe(el);
     });
+
+    /* stagger the rows inside each list */
+    document.querySelectorAll(".rows").forEach(function (list) {
+      var rows = list.querySelectorAll(".row");
+      rows.forEach(function (row, i) {
+        row.classList.add("rv");
+        row.style.transitionDelay = Math.min(i * 70, 420) + "ms";
+        io.observe(row);
+      });
+    });
   }
 
   /* ----- syntax highlighting ----- */
@@ -75,6 +85,56 @@
     });
     bar.appendChild(btn);
   });
+
+  /* ----- voice message from elia (appears only when audio exists) ----- */
+  var vm = document.getElementById("voicemsg");
+  if (vm && !sessionStorage.getItem("vm-dismissed")) {
+    var vmAudio = document.getElementById("vmAudio");
+    var vmPlay = document.getElementById("vmPlay");
+    var vmIcon = document.getElementById("vmIcon");
+    var vmTime = document.getElementById("vmTime");
+    var vmClose = document.getElementById("vmClose");
+
+    var vmFmt = function (s) {
+      s = Math.max(0, Math.floor(s || 0));
+      return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+    };
+
+    vmAudio.addEventListener("loadedmetadata", function () {
+      vmTime.textContent = vmFmt(vmAudio.duration);
+      vm.hidden = false;
+      setTimeout(function () { vm.classList.add("on"); }, 1200);
+    });
+    /* no audio file yet -> widget stays hidden */
+
+    vmPlay.addEventListener("click", function (e) {
+      if (e.target === vmClose) return;
+      if (vmAudio.paused) {
+        vmAudio.play();
+        vm.classList.add("playing");
+        vmIcon.textContent = "❚❚";
+      } else {
+        vmAudio.pause();
+        vm.classList.remove("playing");
+        vmIcon.textContent = "▶";
+      }
+    });
+    vmAudio.addEventListener("timeupdate", function () {
+      if (!vmAudio.paused) vmTime.textContent = vmFmt(vmAudio.currentTime);
+    });
+    vmAudio.addEventListener("ended", function () {
+      vm.classList.remove("playing");
+      vmIcon.textContent = "▶";
+      vmTime.textContent = vmFmt(vmAudio.duration);
+    });
+    vmClose.addEventListener("click", function (e) {
+      e.stopPropagation();
+      vmAudio.pause();
+      vm.classList.remove("on");
+      try { sessionStorage.setItem("vm-dismissed", "1"); } catch (err) {}
+      setTimeout(function () { vm.hidden = true; }, 400);
+    });
+  }
 
   /* ----- FIG. 0 — the live Watch instrument (home page only) ----- */
   var sim = document.getElementById("sim");
