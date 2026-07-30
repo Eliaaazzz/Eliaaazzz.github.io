@@ -7,19 +7,20 @@
   <meta name="description" content="Elia (Zhenyu) Liu — GSoC 2026 contributor at Apache Beam, final-year CS at the University of Melbourne. Streaming systems, ML research, and a live demo of the Watch transform.">
   <link rel="canonical" href="https://eliaaazzz.github.io/">
   <meta property="og:title" content="Elia Liu — software engineer &amp; researcher">
-  <meta property="og:description" content="I taught Apache Beam's Python SDK to read data that never ends. Streaming systems, ML research, sub-millisecond hot paths.">
+  <meta property="og:description" content="I teach batch systems to run forever. Unbounded sources & the Watch transform for Apache Beam, GSoC 2026.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://eliaaazzz.github.io/">
   <meta property="og:site_name" content="Elia Liu">
+  <meta property="og:image" content="https://eliaaazzz.github.io/assets/img/elia.jpg">
   <meta name="twitter:card" content="summary">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ea">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171a12">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
   <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/main.css">
   <script defer src="/assets/js/main.js"></script>
   <script type="application/ld+json">
@@ -29,6 +30,7 @@
     "name": "Elia Liu",
     "alternateName": "Zhenyu Liu",
     "url": "https://eliaaazzz.github.io/",
+    "image": "https://eliaaazzz.github.io/assets/img/elia.jpg",
     "sameAs": [
       "https://github.com/Eliaaazzz",
       "https://www.linkedin.com/in/elia-liu"
@@ -46,15 +48,26 @@
     <header class="tblock">
       <div class="id">
         <h1>Elia Liu<span class="lt">.</span></h1>
-        <p class="role">I taught <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>'s
-          Python SDK to read data that never ends — unbounded sources &amp; the Watch transform,
+        <p class="role">I teach batch systems to run <span class="gs">forever</span> —
+          unbounded sources &amp; the <span class="gs">Watch</span> transform for
+          <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>,
           Google Summer of Code 2026. Streaming systems, ML research, sub-millisecond hot paths.</p>
+        <div class="cta">
+          <a class="btn primary" href="/blog/beam-python-unbounded-sources/">read the gsoc story →</a>
+          <a class="btn" href="/sde/">browse the sde sheet</a>
+        </div>
+      </div>
+      <div class="photo">
+        <div class="photo-card">
+          <img src="/assets/img/elia.jpg" width="640" height="806" alt="Elia Liu standing in snow with Mt. Fuji behind">
+          <span class="cap"><span>field photo</span><span>mt. fuji</span></span>
+        </div>
       </div>
       <div class="meta">
         <div><b>SHEET</b>eliaaazzz.github.io</div>
         <div><b>REVISION</b>2026-07 · GSoC edition</div>
         <div><b>LOCATION</b>Melbourne, AU</div>
-        <div><b>STATUS</b>open to 2027 grad roles</div>
+        <div class="lit"><b>STATUS</b>open to 2027 grad roles</div>
       </div>
     </header>
 
@@ -71,6 +84,13 @@
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
         <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
       </button>
+    </div>
+
+    <div class="ticker bleed" aria-hidden="true">
+      <div class="ticker-track">
+        <span>streaming pipelines</span><span>exactly-once</span><span>honest watermarks</span><span>15 merged PRs @ apache beam</span><span>13.0× → 1.07× gpu padding</span><span>p99 5.3ms @ 10k users</span><span>flink 174/0</span><span>app store, solo</span><span>melbourne, au</span>
+        <span>streaming pipelines</span><span>exactly-once</span><span>honest watermarks</span><span>15 merged PRs @ apache beam</span><span>13.0× → 1.07× gpu padding</span><span>p99 5.3ms @ 10k users</span><span>flink 174/0</span><span>app store, solo</span><span>melbourne, au</span>
+      </div>
     </div>
 
     <section class="fig" aria-labelledby="fig0">
@@ -95,6 +115,21 @@
       <p class="sim-note">This widget mirrors the real semantics: every poll re-lists the whole
         bucket, but state remembers what was emitted — duplicates are struck, and a crash-restart
         wouldn't re-emit. <a href="/blog/beam-python-watch-transform/">Read how the real one works →</a></p>
+    </section>
+
+    <section class="manifesto bleed" aria-label="Manifesto">
+      <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <div class="shell">
+        <p>Teaching batch systems to run <span class="gs">forever</span>. Unbounded sources,
+          honest <span class="gs">watermarks</span>, every file exactly
+          <span class="gs">once</span> — shipped into Apache Beam.</p>
+        <p class="sig">— gsoc 2026 · python sdk · reviewed by the beam pmc chair</p>
+      </div>
     </section>
 
     <section class="fig" aria-labelledby="fig1">
@@ -122,7 +157,7 @@
     </section>
 
     <section class="fig" aria-labelledby="fig2">
-      <div class="fig-cap" id="fig2"><span class="no">FIG. 2</span><span>selected work</span><a href="/sde/">the SDE page →</a></div>
+      <div class="fig-cap" id="fig2"><span class="no">FIG. 2</span><span>selected work</span><a href="/sde/">the SDE sheet →</a></div>
       <div class="rows">
         <div class="row">
           <span class="when">2025 — now</span>
@@ -174,18 +209,39 @@
       </div>
     </section>
 
+    <section class="fig" aria-labelledby="fig4">
+      <div class="fig-cap" id="fig4"><span class="no">FIG. 4</span><span>right now</span></div>
+      <div class="now-panel">
+        <div class="now-row"><span class="k">building</span><span class="v"><a href="https://github.com/apache/beam/pull/39461">MatchContinuously on Watch</a> — file discovery with replay-safe dedup (#39461, in review)</span></div>
+        <div class="now-row"><span class="k">in review</span><span class="v"><a href="https://github.com/apache/beam/pull/39090">O(1) timestamp-cursor dedup state</a> — 4.1× throughput on long watches (#39090)</span></div>
+        <div class="now-row"><span class="k">researching</span><span class="v">Why LLM skill compositions collapse to exactly 0.000 — <a href="/research/#compomole">manuscript in prep</a></span></div>
+        <div class="now-row"><span class="k">status</span><span class="v">Final-year CS @ University of Melbourne — open to 2027 new-grad roles</span></div>
+      </div>
+    </section>
+
   </main>
 
-  <footer class="foot shell">
-    <div class="foot-inner">
-      <span>© 2026 Elia Liu</span>
+  <footer class="foot">
+    <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="shell">
+      <p class="foot-big">Let's build something that runs <span class="gs">forever</span>.</p>
       <nav class="foot-links" aria-label="Elsewhere">
-        <a href="https://github.com/Eliaaazzz">GitHub</a>
-        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
-        <a href="mailto:elialiulzy@gmail.com">Email</a>
-        <a href="/feed.xml">RSS</a>
+        <a href="https://github.com/Eliaaazzz">github</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+        <a href="/feed.xml">rss</a>
+        <a href="/blog/">blog</a>
       </nav>
-      <span>drawn by hand — no framework</span>
+      <div class="foot-fine">
+        <span>© 2026 elia (zhenyu) liu</span>
+        <span>drawn by hand — no framework</span>
+        <span>melbourne, au</span>
+      </div>
     </div>
   </footer>
 </body>

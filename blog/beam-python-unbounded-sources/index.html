@@ -14,14 +14,14 @@
   <meta property="article:published_time" content="2026-07-28">
   <meta property="article:author" content="Elia Liu">
   <meta name="twitter:card" content="summary">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f9f7">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ea">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171a12">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
   <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/main.css">
   <script defer src="/assets/vendor/highlight.min.js"></script>
   <script defer src="/assets/js/main.js"></script>
@@ -808,16 +808,27 @@ with beam.Pipeline(options=opts) as p:
     </article>
   </main>
 
-  <footer class="foot shell">
-    <div class="foot-inner">
-      <span>© 2026 Elia Liu</span>
+  <footer class="foot">
+    <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="shell">
+      <p class="foot-big">Let's build something that runs <span class="gs">forever</span>.</p>
       <nav class="foot-links" aria-label="Elsewhere">
-        <a href="https://github.com/Eliaaazzz">GitHub</a>
-        <a href="https://www.linkedin.com/in/elia-liu">LinkedIn</a>
-        <a href="mailto:elialiulzy@gmail.com">Email</a>
-        <a href="/feed.xml">RSS</a>
+        <a href="https://github.com/Eliaaazzz">github</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+        <a href="/feed.xml">rss</a>
+        <a href="/blog/">blog</a>
       </nav>
-      <span>drawn by hand — no framework</span>
+      <div class="foot-fine">
+        <span>© 2026 elia (zhenyu) liu</span>
+        <span>drawn by hand — no framework</span>
+        <span>melbourne, au</span>
+      </div>
     </div>
   </footer>
 </body>
