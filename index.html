@@ -7,7 +7,7 @@
   <meta name="description" content="Elia (Zhenyu) Liu — GSoC 2026 contributor at Apache Beam, final-year CS at the University of Melbourne. Streaming systems, ML research, and a live demo of the Watch transform.">
   <link rel="canonical" href="https://eliaaazzz.github.io/">
   <meta property="og:title" content="Elia Liu — software engineer &amp; researcher">
-  <meta property="og:description" content="I teach batch systems to run forever. Unbounded sources & the Watch transform for Apache Beam, GSoC 2026.">
+  <meta property="og:description" content="AI/ML researcher & software engineer. Unbounded sources & the Watch transform for Apache Beam (GSoC 2026); research on robust ML and what LLMs quietly can't do.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://eliaaazzz.github.io/">
   <meta property="og:site_name" content="Elia Liu">
@@ -35,7 +35,7 @@
       "https://github.com/Eliaaazzz",
       "https://www.linkedin.com/in/elia-liu"
     ],
-    "jobTitle": "Software Engineer",
+    "jobTitle": "AI/ML Researcher & Software Engineer",
     "affiliation": { "@type": "CollegeOrUniversity", "name": "University of Melbourne" }
   }
   </script>
@@ -48,13 +48,17 @@
     <header class="tblock">
       <div class="id">
         <h1>Elia Liu<span class="lt">.</span></h1>
-        <p class="role">I teach batch systems to run <span class="gs">forever</span> —
-          unbounded sources &amp; the <span class="gs">Watch</span> transform for
-          <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>,
-          Google Summer of Code 2026. Streaming systems, ML research, sub-millisecond hot paths.</p>
+        <p class="role"><strong>AI/ML researcher &amp; software engineer.</strong>
+          I teach batch systems to run <span class="gs">forever</span> — unbounded sources &amp;
+          the <span class="gs">Watch</span> transform, shipped into
+          <a href="https://github.com/apache/beam/pulls?q=is%3Apr+author%3AEliaaazzz">Apache Beam</a>
+          for Google Summer of Code 2026 — and probe what LLMs quietly
+          <span class="gs">can't</span> do: undergraduate researcher at the University of
+          Melbourne, co-supervised by Prof. Toby Murray and Dr Aaron Bembenek (PhD, Harvard).</p>
         <div class="cta">
           <a class="btn primary" href="/blog/beam-python-unbounded-sources/">read the gsoc story →</a>
-          <a class="btn" href="/sde/">browse the sde sheet</a>
+          <a class="btn" href="/research/">research sheet</a>
+          <a class="btn" href="/sde/">sde sheet</a>
         </div>
       </div>
       <div class="photo">
@@ -80,13 +84,10 @@
         <a href="https://www.linkedin.com/in/elia-liu">linkedin ↗</a>
         <a href="mailto:elialiulzy@gmail.com">email</a>
       </nav>
-      <span style="display:flex;gap:0.5rem">
-      <button class="lang-btn" id="langBtn" type="button" aria-label="切换到中文">中</button>
       <button class="theme-btn" type="button" aria-label="Toggle color theme">
         <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
         <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
       </button>
-      </span>
     </div>
 
     <div class="ticker bleed" aria-hidden="true">
@@ -140,7 +141,8 @@
       <div class="rows">
         <div class="row">
           <span class="when">jul 30 2026</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/flink.svg" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/blog/beam-python-local-flink/">Runner field notes: a local Flink cluster, then the Spark runner</a></h3>
             <p>Two hands-on guides with raw screenshots from live runs — a real streaming job on
               Flink 1.20 (checkpoints included), and the portable Spark loop end to end, plus the
@@ -151,7 +153,8 @@
         </div>
         <div class="row">
           <span class="when">jul 30 2026</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/beam.svg" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/blog/beam-python-watch-transform/">Watch: a polling transform for things that grow</a></h3>
             <p>Polling SDFs, dedup by hash, termination conditions — and watching a bucket for new
               files, forever. Part 2 of the GSoC streaming story.</p>
@@ -160,7 +163,8 @@
         </div>
         <div class="row">
           <span class="when">jul 28 2026</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/beam.svg" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/blog/beam-python-unbounded-sources/">Teaching Python pipelines to never stop</a></h3>
             <p>The Python SDK had no unbounded sources for a decade. A from-zero tutorial on streaming,
               Splittable DoFns, and the API I shipped — validated on four runners.</p>
@@ -175,7 +179,8 @@
       <div class="rows">
         <div class="row">
           <span class="when">2025 — now</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/beam.svg" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/sde/#beam">Apache Beam — GSoC 2026</a></h3>
             <p>First public UnboundedSource API in the Python SDK; ML-inference batching
               13.0× → 1.07× padding; Flink SDF-state OOM fix. 15 merged PRs, reviewed by the
@@ -184,7 +189,8 @@
         </div>
         <div class="row">
           <span class="when">2025 — now</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/metriful.png" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/sde/#metriful">Metriful</a></h3>
             <p>AI nutrition app on the Apple App Store, built solo — Gemini Vision + LiDAR depth
               geometry + USDA retrieval, under 3 seconds per meal.</p>
@@ -192,7 +198,8 @@
         </div>
         <div class="row">
           <span class="when">2026</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/bytedance.svg" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/sde/#lumen">Lumen Auction</a></h3>
             <p>One Redis Lua script as the sole write path — 10K users, p99 5.3 ms, zero sequence
               gaps. Outstanding Project Award, top 5 / 100, ByteDance AI Full-Stack Challenge.</p>
@@ -206,7 +213,8 @@
       <div class="rows">
         <div class="row">
           <span class="when">2026 — now</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/unimelb.png" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/research/#compomole">Compositional collapse in LLMs</a></h3>
             <p>Held-out skill compositions score exactly 0.000 while each atomic skill saturates —
               traced to generation order, then reversed (0.000 → 0.975). Manuscript in preparation.</p>
@@ -214,7 +222,8 @@
         </div>
         <div class="row">
           <span class="when">2026 — now</span>
-          <div>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/unimelb.png" alt="" width="46" height="46" loading="lazy"></span>
             <h3><a href="/research/#neurosymbolic">Certified robustness × neurosymbolic reasoning</a></h3>
             <p>With Prof. Toby Murray &amp; Dr Aaron Bembenek at the University of Melbourne — composing
               differentiable Datalog (Scallop) with globally-robust networks.</p>
