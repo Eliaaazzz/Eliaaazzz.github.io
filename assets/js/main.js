@@ -2,6 +2,19 @@
 (function () {
   "use strict";
 
+  /* ----- google analytics (GA4) ----- */
+  var GA_ID = "G-33TX21502X";
+  if (GA_ID && GA_ID.indexOf("PENDING") === -1 && location.hostname !== "localhost") {
+    var gs = document.createElement("script");
+    gs.async = true;
+    gs.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
+    document.head.appendChild(gs);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag("js", new Date());
+    window.gtag("config", GA_ID);
+  }
+
   /* ----- theme toggle (initial theme set inline in <head>) ----- */
   var toggle = document.querySelector(".theme-btn");
   if (toggle) {
