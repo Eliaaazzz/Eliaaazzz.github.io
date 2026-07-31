@@ -7,6 +7,13 @@
     <language>en</language>
     <atom:link href="https://eliaaazzz.github.io/feed.xml" rel="self" type="application/rss+xml"/>
     <item>
+      <title>The code came out identical. The tests didn't.</title>
+      <link>https://eliaaazzz.github.io/blog/graph-vs-loop-agent-harness/</link>
+      <guid>https://eliaaazzz.github.io/blog/graph-vs-loop-agent-harness/</guid>
+      <pubDate>Fri, 31 Jul 2026 06:00:00 GMT</pubDate>
+      <description>The same backend feature built twice — once through a typed-state graph, once through a feedback loop, both driving Codex on one frozen spec. Byte-identical behaviour across 20,000 random cases; mutation testing broke the tie 11/11 to 6/11.</description>
+    </item>
+    <item>
       <title>Beam Python on the Spark runner — and where streaming stops</title>
       <link>https://eliaaazzz.github.io/blog/beam-python-spark-runner/</link>
       <guid>https://eliaaazzz.github.io/blog/beam-python-spark-runner/</guid>

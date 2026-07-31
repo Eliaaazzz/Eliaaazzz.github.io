@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The code came out identical. The tests didn't. — Elia Liu</title>
+  <meta name="description" content="I built the same backend feature twice — once with a graph-engineered harness, once with a feedback loop, both driving Codex. Byte-identical behaviour across 20,000 random cases. The difference showed up only under mutation testing: 11/11 versus 6/11.">
+  <link rel="canonical" href="https://eliaaazzz.github.io/blog/graph-vs-loop-agent-harness/">
+  <meta property="og:title" content="The code came out identical. The tests didn't.">
+  <meta property="og:description" content="Graph engineering vs. a feedback loop, same spec, same model. What the extra wiring actually bought — measured, not argued.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://eliaaazzz.github.io/blog/graph-vs-loop-agent-harness/">
+  <meta property="og:site_name" content="Elia Liu">
+  <meta property="article:published_time" content="2026-07-31">
+  <meta property="article:author" content="Elia Liu">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f1ea">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171a12">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="alternate" type="application/rss+xml" title="Elia Liu — writing" href="/feed.xml">
+  <script>(function(){try{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/vendor/highlight.min.js"></script>
+  <script defer src="/assets/js/main.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "The code came out identical. The tests didn't.",
+    "description": "Graph engineering vs. a feedback loop, same spec, same model, one backend feature built twice — and what the extra wiring actually bought.",
+    "datePublished": "2026-07-31",
+    "author": { "@type": "Person", "name": "Elia Liu", "url": "https://eliaaazzz.github.io/" }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar shell">
+    <a class="wordmark" href="/">Elia Liu<span class="lt">.</span></a>
+    <div class="topbar-right">
+      <nav class="crumbs" aria-label="Site">
+        <a href="/">home</a>
+        <a href="/blog/" aria-current="page">blog</a>
+        <a href="/sde/">sde</a>
+        <a href="/research/">research</a>
+      </nav>
+      <button class="theme-btn" type="button" aria-label="Toggle color theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 14.2A8.2 8.2 0 0 1 9.8 3.8a8.2 8.2 0 1 0 10.4 10.4Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <article>
+
+      <header class="post-head shell">
+        <p class="crumb"><a href="/blog/">blog</a> / agent harnesses · a benchmark, not an opinion</p>
+        <h1>The code came out identical. The tests didn't.</h1>
+        <p class="dek">
+          I'd just read enough about graph engineering to be enthusiastic about it, which is a
+          dangerous state to make architecture decisions in. So I built the same backend feature
+          twice — once through a typed-state graph, once through a feedback loop, both driving
+          Codex on the same spec — and measured what the extra wiring actually bought. It was not
+          what I expected, and one of the two runs I had to throw in the bin.
+        </p>
+        <div class="post-meta">
+          <time datetime="2026-07-31">July 31, 2026</time><span class="sep">·</span>
+          <span>12 min read</span><span class="sep">·</span>
+          <span>agents</span><span class="sep">·</span>
+          <span>codex</span><span class="sep">·</span>
+          <span>benchmark</span>
+        </div>
+      </header>
+
+      <div class="post-layout shell">
+
+        <details class="toc-mobile">
+          <summary>Contents</summary>
+          <ol>
+            <li><a href="#the-question">The question</a></li>
+            <li><a href="#rules">Rules of the game</a></li>
+            <li><a href="#two-harnesses">The two harnesses</a></li>
+            <li><a href="#thrown-away">The run I threw away</a></li>
+            <li><a href="#results">What came back</a></li>
+            <li><a href="#tie">The tie that wouldn't break</a></li>
+            <li><a href="#mutation">Mutation testing settles it</a></li>
+            <li><a href="#critic">The critic that saw it and shrugged</a></li>
+            <li><a href="#takeaway">What I'd actually do</a></li>
+            <li><a href="#limits">Where this stops being true</a></li>
+          </ol>
+        </details>
+
+        <div class="prose">
+
+          <h2 id="the-question"><a href="#the-question">The question</a></h2>
+
+          <p>There are two camps about how to point a coding agent at a task, and in 2026 they are
+          both loud. One says: wire your agents into an explicit graph — typed state on the edges,
+          deterministic routers, gates you can inspect when something goes wrong at 3am. The other
+          says: stop building scaffolding, a good model in a tight loop with a compiler will beat
+          your boxes and arrows, and Claude Code and Codex are the existence proof.</p>
+
+          <p>Both arguments are persuasive when you read them. Neither comes with numbers. The
+          debate I read most recently cited engagement counts on X as evidence, which is a measure
+          of something, just not of this.</p>
+
+          <p>So: same feature, same spec, same model, two harnesses, and a scoreboard I couldn't
+          argue my way out of afterwards. My prior was that the graph would win. I wanted to know
+          by how much, and on which axis.</p>
+
+          <h2 id="rules"><a href="#rules">Rules of the game</a></h2>
+
+          <p>The feature is one I actually wanted in my nutrition app's backend: an adaptive TDEE
+          estimator. Instead of assuming your maintenance calories from a textbook formula, it
+          <em>measures</em> them from the energy-balance identity — over a window, what you ate
+          minus what your body mass did. MacroFactor built a business on this. It is about 300
+          lines of Java, it touches no database, and it is stuffed with the kind of edge cases that
+          separate code that works from code that looks like it works: outlier scale readings,
+          half-logged days, duplicate entries, not enough data to say anything honest at all.</p>
+
+          <p>I wrote the spec first and froze it. Every formula, every threshold, every exception
+          message pinned down — <code>7700</code> kcal per kg, a day under 500 kcal doesn't count
+          as logged, drop weight readings more than 3 kg from the window median, clamp the answer
+          between 1× and 2.5× BMR, round to the nearest ten. Both harnesses got that file, byte for
+          byte.</p>
+
+          <p>Then, before either one ran, I wrote something neither of them would ever see: 23
+          acceptance tests, expected values worked out by hand from the spec. A held-out set. If
+          you only score an agent on the tests it wrote itself, you are measuring its confidence,
+          not its correctness.</p>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>Think of it as an exam. I wrote the syllabus and handed it to both students. Then I
+            wrote the exam paper and locked it in a drawer. Neither of them got to set their own
+            questions — which is exactly what happens when you let an agent write both the code and
+            the tests and then celebrate the green checkmark.</p>
+          </div>
+
+          <p>One more step, and it's the one people skip: I hand-wrote a reference implementation
+          of the spec myself and ran the held-out suite against it. 23/23. If my exam paper had a
+          typo in it, I'd rather find out before it was grading anybody.</p>
+
+          <p>The rest is plumbing, kept deliberately identical: two isolated git worktrees off the
+          same commit, Codex <code>gpt-5.5</code> at the same reasoning effort for both, the same
+          Gradle harness compiling and running the tests, and both runs executed
+          <em>sequentially</em> so neither was fighting the other for CPU while I timed it.</p>
+
+          <h2 id="two-harnesses"><a href="#two-harnesses">The two harnesses</a></h2>
+
+          <p>I built each one to the best practices its own literature recommends, not to a straw
+          man of it.</p>
+
+          <figure>
+            <svg class="diagram" viewBox="0 0 660 300" role="img" aria-labelledby="d-topo" style="max-width:660px">
+              <title id="d-topo">The graph fans out to independent nodes with deterministic gates; the loop cycles one agent through an external verifier and a critic.</title>
+
+              <text class="d-ink3" x="16" y="14" font-size="11">GRAPH — typed state on the edges, routing decided in code</text>
+
+              <rect class="d-line" x="16" y="38" width="86" height="30" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="30" y="57" font-size="10">spec</text>
+
+              <line class="d-line" x1="102" y1="53" x2="140" y2="40" stroke-width="1.5"/>
+              <line class="d-line" x1="102" y1="53" x2="140" y2="66" stroke-width="1.5"/>
+
+              <rect class="d-line" x="140" y="26" width="104" height="28" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="152" y="44" font-size="10">contract (122)</text>
+              <rect class="d-line" x="140" y="60" width="104" height="28" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="152" y="78" font-size="10">conventions</text>
+
+              <line class="d-line" x1="244" y1="40" x2="282" y2="53" stroke-width="1.5"/>
+              <line class="d-line" x1="244" y1="74" x2="282" y2="53" stroke-width="1.5"/>
+
+              <rect class="d-line" x="282" y="24" width="96" height="28" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="294" y="42" font-size="10">implement</text>
+              <rect class="d-line" x="282" y="58" width="96" height="28" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="294" y="76" font-size="10">write tests</text>
+              <text class="d-ink3" x="288" y="102" font-size="9">separate context</text>
+
+              <line class="d-line" x1="378" y1="53" x2="416" y2="53" stroke-width="1.5"/>
+              <rect class="d-line" x="416" y="38" width="92" height="30" fill="none" stroke-width="2"/>
+              <text class="d-ink2" x="428" y="57" font-size="10">gradle gate</text>
+
+              <line class="d-line" x1="508" y1="53" x2="546" y2="53" stroke-width="1.5"/>
+              <rect class="d-line" x="546" y="38" width="98" height="30" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="558" y="57" font-size="10">2 reviewers</text>
+
+              <line class="d-line" x1="462" y1="68" x2="462" y2="108" stroke-width="1.2" stroke-dasharray="4 3"/>
+              <text class="d-ink3" x="380" y="122" font-size="9">red → bounded repair edge (never fired)</text>
+
+              <line class="d-line" x1="16" y1="140" x2="644" y2="140" stroke-width="1" stroke-dasharray="2 4"/>
+
+              <text class="d-ink3" x="16" y="168" font-size="11">LOOP — one trajectory, driven by an external signal</text>
+
+              <rect class="d-line" x="16" y="188" width="110" height="30" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="28" y="207" font-size="10">generate all</text>
+
+              <line class="d-line" x1="126" y1="203" x2="172" y2="203" stroke-width="1.5"/>
+              <rect class="d-line" x="172" y="188" width="104" height="30" fill="none" stroke-width="2"/>
+              <text class="d-ink2" x="184" y="207" font-size="10">gradle gate</text>
+
+              <line class="d-line" x1="276" y1="203" x2="322" y2="203" stroke-width="1.5"/>
+              <rect class="d-line" x="322" y="188" width="120" height="30" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="334" y="207" font-size="10">critic (rubric)</text>
+
+              <line class="d-line" x1="442" y1="203" x2="488" y2="203" stroke-width="1.5"/>
+              <rect class="d-line" x="488" y="188" width="96" height="30" fill="none" stroke-width="1.5"/>
+              <text class="d-ink2" x="500" y="207" font-size="10">approved</text>
+
+              <path class="d-line" d="M382 218 L382 250 L71 250 L71 218" fill="none" stroke-width="1.2" stroke-dasharray="4 3"/>
+              <text class="d-ink3" x="180" y="266" font-size="9">reject → reflect, then refine in the same context (never fired)</text>
+            </svg>
+            <figcaption>Both harnesses, drawn to scale of what actually executed. The dashed edges
+            are the recovery paths. Neither run needed one.</figcaption>
+          </figure>
+
+          <p><strong>The graph.</strong> Every model node returns a JSON-Schema-validated object,
+          not prose — so state moves along the edges as data. Nodes only see the slice they need.
+          Anything with a known rule is plain code rather than a model call: the window filter, the
+          compile gate, the test gate, the join. Routing is a guard condition I can read:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">graph.mjs</span></div>
+            <pre><code class="language-javascript">// two review lenses, fanned out, joined and de-duplicated in code —
+// the model never decides where control flow goes next
+const [edge, math] = await Promise.all([lens('edge', ...), lens('math', ...)]);
+const blocking = dedupe([...edge.findings, ...math.findings])
+                   .filter(f =&gt; f.severity === 'BLOCKING');
+
+if (blocking.length &gt; 0) await patch(blocking);   // this edge, or no edge</code></pre>
+          </div>
+
+          <p>The piece that turned out to matter: <strong>writing the tests is its own node</strong>,
+          with its own context, fed by a decomposed contract rather than by the implementation. Its
+          instructions said, in effect: you may open the main code to check a method signature, but
+          every expected value you assert has to come from the spec — and if the implementation
+          disagrees with the spec, your test should fail.</p>
+
+          <p><strong>The loop.</strong> One agent, one long-lived session, told to write the feature
+          and its tests. Then the cycle the reflect-refine literature actually recommends, not the
+          naive version: the loop is driven by an <em>external</em> verifier — the compiler and the
+          test run — because self-assessment without a hard signal is the well-documented way these
+          loops fool themselves. When the build goes green, an independent critic gets a fresh
+          read-only session and a scoring rubric. Failures become verbal lessons appended to a
+          <code>REFLECTIONS.md</code> that is re-injected on every subsequent attempt, Reflexion
+          style. Bounded at five iterations. Convergence is a threshold in my code, not a vibe in
+          the model's head.</p>
+
+          <h2 id="thrown-away"><a href="#thrown-away">The run I threw away</a></h2>
+
+          <p>Here is the part I'd quite like to leave out.</p>
+
+          <p><code>codex exec resume</code> doesn't accept the <code>-C</code> working-directory
+          flag that <code>codex exec</code> does. I found that out the sensible way, with a smoke
+          test, and fixed it by dropping <code>-C</code> and setting the child process's working
+          directory instead. Which I did — in the Gradle helper. Not in the Codex helper.</p>
+
+          <p>So the graph's second run executed entirely inside my main repository. It couldn't find
+          the spec file, because the spec lived in the worktree. And instead of failing, it did the
+          most reasonable-looking thing available to it: it invented a plausible TDEE specification
+          from the surrounding code, implemented that, wrote tests for it, and — this is the detail
+          that stuck with me — created a test file called
+          <code>SpecTdeeMdMissingTest.java</code> to document that the spec it had been told was
+          authoritative was nowhere to be found. Then it reported success. Every gate I'd built was
+          green, because every gate was measuring the wrong tree.</p>
+
+          <p>Nothing tracked was modified, the stray files came back out cleanly, and I reran from
+          zero. But the lesson is not "I made a typo". It's that an agent harness needs the same
+          guard rails as the thing it's testing, and my elaborate typed-state graph had no
+          assertion anywhere that it was standing in the right directory. The fix is four words
+          long and now runs before every model call:</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">runner.mjs</span></div>
+            <pre><code class="language-javascript">if (!fs.existsSync(path.join(cwd, 'SPEC-TDEE.md')))
+  throw new Error(`spec missing in ${cwd} — wrong working dir`);</code></pre>
+          </div>
+
+          <p>Every number below comes from the clean rerun.</p>
+
+          <h2 id="results"><a href="#results">What came back</a></h2>
+
+          <p>Both harnesses compiled first try. Both passed their own tests first try. No repair
+          edge fired on either side, which I did not expect and which already tells you something
+          about how good the underlying model is at a well-specified task.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>&nbsp;</th><th>Graph</th><th>Loop</th></tr></thead>
+              <tbody>
+                <tr><td>Held-out acceptance (23 cases, unseen)</td><td>23 / 23</td><td>23 / 23</td></tr>
+                <tr><td>Full backend regression</td><td>491 tests, 0 fail</td><td>456 tests, 0 fail</td></tr>
+                <tr><td>Tests it wrote for itself</td><td>55</td><td>20</td></tr>
+                <tr><td>Main code / test code</td><td>309 / 788 lines</td><td>335 / 360 lines</td></tr>
+                <tr><td>Codex calls</td><td>6</td><td>2</td></tr>
+                <tr><td>Output tokens (of which reasoning)</td><td>70.3k (43.3k)</td><td>30.9k (19.5k)</td></tr>
+                <tr><td>Input tokens</td><td>1.45M</td><td>0.44M</td></tr>
+                <tr><td>Wall clock</td><td>14.1 min</td><td>7.4 min</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>Read the first row again. A dead heat on the metric I'd spent the most care designing.
+          The graph cost 2.3× the output tokens and roughly twice the wall clock to arrive at the
+          same score.</p>
+
+          <p>If I'd stopped there — and I nearly did, because that's a clean, publishable,
+          counterintuitive result — I would have written a post arguing that graph engineering is
+          expensive ceremony. That post would have been wrong.</p>
+
+          <h2 id="tie"><a href="#tie">The tie that wouldn't break</a></h2>
+
+          <p>Twenty-three hand-written tests failing to separate two implementations can mean two
+          very different things: the implementations are genuinely equivalent, or my exam was too
+          easy. Those deserve different conclusions, so I went and found out.</p>
+
+          <p>I wrote a differential harness: 20,000 seeded random requests — null dates, duplicate
+          entries, weights of zero and negative weights, calorie values straddling the 500 boundary,
+          windows outside the legal range, missing BMR inputs — with every result dumped to a CSV.
+          The same file compiled into all three trees: graph, loop, and my hand-written reference.
+          Identical seeds, identical inputs, so any behavioural difference anywhere shows up as a
+          line in a diff.</p>
+
+          <div class="codeblock">
+            <div class="codeblock-bar"><span class="fname">diff</span></div>
+            <pre><code>graph vs ref   0 divergences
+loop  vs ref   0 divergences
+graph vs loop  0 divergences</code></pre>
+          </div>
+
+          <p>Byte for byte, 60,000 lines, three independent implementations. So it wasn't my exam
+          being easy. On a spec this precise, the harness topology genuinely does not change what
+          the model gets right. The loop camp is correct about that, and I'd been quietly assuming
+          otherwise.</p>
+
+          <h2 id="mutation"><a href="#mutation">Mutation testing settles it</a></h2>
+
+          <p>Which leaves the other half of the deliverable. Both harnesses shipped a test suite,
+          and those suites are what will be standing between this code and the next person who
+          edits it. One is 788 lines and one is 360. Does the difference buy anything, or is it
+          just more typing?</p>
+
+          <p>The way to answer that is to break the code on purpose. I wrote eleven mutations, each
+          a plausible misreading of the spec rather than random noise — the kind of thing a tired
+          human or a hurried model actually does:</p>
+
+          <ul>
+            <li><code>caloriesIn &gt;= 500</code> becomes <code>&gt; 500</code></li>
+            <li>the even-count median takes the upper middle instead of the mean of the two</li>
+            <li>the outlier band tightens from <code>&lt;= 3.0</code> to <code>&lt; 3.0</code></li>
+            <li>each sufficiency threshold slips by one</li>
+            <li>rounding to the nearest ten becomes truncation</li>
+            <li>duplicate dates resolve first-wins instead of last-wins</li>
+            <li>the female Mifflin constant shifts from &minus;161 to &minus;165</li>
+          </ul>
+
+          <p>Apply one, run only that worktree's own suite, record whether anything went red,
+          restore, repeat.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Mutation</th><th>Graph's suite</th><th>Loop's suite</th></tr></thead>
+              <tbody>
+                <tr><td>partial-day boundary <code>&gt;=500 → &gt;500</code></td><td>killed</td><td>killed</td></tr>
+                <tr><td>even-count median → upper middle</td><td>killed</td><td><strong>survived</strong></td></tr>
+                <tr><td>outlier band <code>&lt;=3.0 → &lt;3.0</code></td><td>killed</td><td>killed</td></tr>
+                <tr><td>intake threshold 10 → 11</td><td>killed</td><td><strong>survived</strong></td></tr>
+                <tr><td>readings threshold 8 → 9</td><td>killed</td><td><strong>survived</strong></td></tr>
+                <tr><td>span threshold <code>&gt;=14 → &gt;14</code></td><td>killed</td><td>killed</td></tr>
+                <tr><td>round-to-ten → truncate</td><td>killed</td><td>killed</td></tr>
+                <tr><td>clamp flag on equality</td><td>killed</td><td><strong>survived</strong></td></tr>
+                <tr><td>duplicate dates first-wins</td><td>killed</td><td>killed</td></tr>
+                <tr><td>HIGH confidence 21 → 22</td><td>killed</td><td><strong>survived</strong></td></tr>
+                <tr><td>female Mifflin &minus;161 → &minus;165</td><td>killed</td><td>killed</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>11 / 11</strong></td><td><strong>6 / 11</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>There it is. Every mutation the loop's tests missed is a threshold or a boundary — the
+          exact places where code passes a happy-path test and quietly returns the wrong number for
+          somebody at 10 logged days instead of 11.</p>
+
+          <p>And a detail that made me put my coffee down: the graph's suite killed three mutants
+          that <em>my own held-out suite</em> couldn't. My exam paper never places a weight reading
+          exactly 3 kg from the median, and my one female-BMR case happens to round to the same
+          ten-kcal bucket under both the correct constant and the broken one. The agent's tests were
+          stricter than the tests I'd written by hand to grade it with.</p>
+
+          <h2 id="critic"><a href="#critic">The critic that saw it and shrugged</a></h2>
+
+          <p>The loop's independent critic was not asleep. Its own written verdict opens by warning
+          that a green build proves nothing here, "because the tests were written by the same agent
+          that wrote the code, so a shared misreading of the spec passes silently." It then listed
+          four concrete coverage gaps. Three of them are, precisely, mutations its suite went on to
+          miss: the even-count median, the exact thresholds, the rounding and clamp boundaries.</p>
+
+          <p>It saw the problem, named the problem, graded every instance of it <code>MINOR</code>,
+          scored edge-case coverage 8 out of 10, and approved. My convergence rule only blocked on
+          <code>BLOCKING</code> findings and a score below 8. It cleared both bars by a hair.</p>
+
+          <div class="callout">
+            <span class="callout-label">in plain words</span>
+            <p>If you let a model attach the severity label, you have let it grade its own homework
+            in a subtler way than usual. It doesn't have to lie about what's wrong. It just has to
+            call it minor. Any loop that gates on a model-assigned severity has a hole in it exactly
+            the shape of that word.</p>
+          </div>
+
+          <h2 id="takeaway"><a href="#takeaway">What I'd actually do</a></h2>
+
+          <p>My prior was half right, which is the least satisfying way to be right. The graph won —
+          but not by producing better code, since the code was indistinguishable across 20,000
+          cases. It won by producing a test suite worth twice as much, and it charged 2.3× the
+          tokens and 1.9× the wall clock for it.</p>
+
+          <p>More usefully, I don't think the win came from the graph <em>shape</em>. It came from
+          one edge in it. Writing the tests was a separate node, with its own context, working from
+          a decomposed contract — 122 criteria, 86 of them flagged as edge cases — rather than from
+          the implementation sitting in the same conversation. The loop's tests inherited the
+          implementation's blind spots because they were written by the same agent, in the same
+          breath, holding the same interpretation of the spec.</p>
+
+          <p>So, concretely:</p>
+
+          <ul>
+            <li>If the tests are the durable asset — backend logic somebody else will edit in six
+              months — <strong>split test authoring into its own node with its own context</strong>.
+              That single decision is what bought the 11/11. You don't need the rest of the graph
+              to get it.</li>
+            <li>If it's a script, a prototype, something you'll review yourself before it matters —
+              take the loop. Same correctness, half the cost, half the time.</li>
+            <li>Either way, never let a critic's own severity label be the last gate. Put something
+              behind it the model cannot grade away. A mutation score is cheap: eleven mutations
+              took me one script and about four minutes of compute, and it broke a tie that
+              23 hand-written tests and 20,000 random inputs couldn't.</li>
+          </ul>
+
+          <h2 id="limits"><a href="#limits">Where this stops being true</a></h2>
+
+          <p>This is n = 1. One feature, one model, one afternoon. Treat the direction as a finding
+          and the magnitudes as anecdote.</p>
+
+          <p>The bigger caveat is my own spec. I wrote it to be gradeable — every formula, every
+          threshold, every exception string nailed down — which is exactly the condition under which
+          a strong model doesn't need help interpreting anything. That choice made the benchmark
+          clean and, I suspect, made it as unfavourable to the graph as it could possibly be. The
+          graph's first node exists to turn ambiguity into 122 explicit criteria, and I handed it a
+          spec with almost no ambiguity left to convert. On a vague ticket, on a real one, I'd
+          expect that gap to open rather than close — but I haven't measured it, so that's a
+          hypothesis, not a result.</p>
+
+          <p>The thing I'd defend without qualification is smaller and more boring than either
+          camp's position: write the exam before the agent starts, keep it where the agent can't
+          reach it, and check that your own harness is standing in the right directory.</p>
+
+        </div>
+      </div>
+
+      <footer class="post-foot shell">
+        <a class="back" href="/blog/">← All posts</a>
+        <nav class="post-nav" aria-label="More posts">
+          <a href="/blog/beam-python-spark-runner/">
+            <span class="dir">Previous</span>
+            <span class="t">Beam Python on the Spark runner — and where streaming stops</span>
+          </a>
+        </nav>
+      </footer>
+
+    </article>
+  </main>
+
+  <footer class="foot">
+    <svg class="contours" viewBox="0 0 1200 320" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-20 40 C 180 10, 360 96, 610 66 S 1010 16, 1220 58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 120 C 220 84, 420 176, 660 140 S 1040 92, 1220 138" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 208 C 160 176, 400 260, 640 220 S 1060 172, 1220 224" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-20 292 C 240 260, 440 330, 700 296 S 1080 258, 1220 300" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="shell">
+      <p class="foot-big">Let's build something that runs <span class="gs">forever</span>.</p>
+      <nav class="foot-links" aria-label="Elsewhere">
+        <a href="https://github.com/Eliaaazzz">github</a>
+        <a href="https://www.linkedin.com/in/elia-liu">linkedin</a>
+        <a href="mailto:elialiulzy@gmail.com">email</a>
+        <a href="/feed.xml">rss</a>
+        <a href="/blog/">blog</a>
+      </nav>
+      <div class="foot-fine">
+        <span>© 2026 elia (zhenyu) liu</span>
+        <span>drawn by hand — no framework</span>
+        <span>melbourne, au</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

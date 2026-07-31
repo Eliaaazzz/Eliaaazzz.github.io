@@ -46,18 +46,29 @@
 
     <header class="pstrip">
       <h1>Blog</h1>
-      <div class="cell"><b>POSTS</b>4 · long-form tutorials</div>
+      <div class="cell"><b>POSTS</b>5 · long-form tutorials</div>
       <div class="cell"><b>FEED</b><a href="/feed.xml" style="text-decoration:none">rss ↗</a></div>
     </header>
     <p class="page-dek">
-      Long-form tutorials from my Google Summer of Code 2026 work on Apache Beam — written so
-      someone who has never touched a data pipeline can follow along, and someone who has can skip
-      straight to the internals.
+      Long-form tutorials and build notes — mostly my Google Summer of Code 2026 work on Apache
+      Beam, written so someone who has never touched a data pipeline can follow along, and someone
+      who has can skip straight to the internals.
     </p>
 
     <section class="fig" aria-labelledby="figposts">
       <div class="fig-cap" id="figposts"><span class="no">FIG. 1</span><span>posts, newest first</span></div>
       <div class="rows">
+        <div class="row">
+          <span class="when">jul 31 2026</span>
+          <div class="hasico">
+            <span class="row-ico"><img src="/assets/img/logos/metriful.png" alt="" width="46" height="46" loading="lazy"></span>
+            <h3><a href="/blog/graph-vs-loop-agent-harness/">The code came out identical. The tests didn't.</a></h3>
+            <p>I built the same backend feature twice — once through a typed-state graph, once
+              through a feedback loop, both driving Codex on the same frozen spec. Byte-identical
+              behaviour across 20,000 random cases. Mutation testing broke the tie.</p>
+            <div class="refs">agents · codex · benchmark · 12 min · <span class="pr">11/11 vs 6/11</span></div>
+          </div>
+        </div>
         <div class="row">
           <span class="when">jul 30 2026</span>
           <div class="hasico">
